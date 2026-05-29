@@ -17,24 +17,16 @@ function getUserInfo() {
         });
     }
 
-    if (typeof tt.requestAuthCode === 'function') {
-      tt.requestAuthCode({
-        appId: CONFIG.APP_ID,
-        success: function(res) { exchangeCode(res.code); },
-        fail: function(err) {
-          var msg = (err && (err.errMsg || err.errString || err.message)) || JSON.stringify(err);
-          reject(new Error('requestAuthCode fail: ' + msg));
-        }
-      });
-    } else {
-      // Fallback: getUserInfo tanpa openId
+    function fallbackGetUserInfo() {
+      // Fallback: pakai getUserInfo withCredentials:false — tidak dapat openId
+      // Role detection akan skip, user diperlakukan sebagai default
       tt.getUserInfo({
         withCredentials: false,
         success: function(res) {
           var info = res.userInfo || res;
           resolve({
-            openId:   info.openId   || info.open_id   || '',
-            nickName: info.nickName || info.nick_name  || ''
+            openId:   '',  // Tidak tersedia tanpa requestAuthCode
+            nickName: info.nickName || info.nick_name || info.displayName || 'User'
           });
         },
         fail: function(err) {
@@ -42,6 +34,20 @@ function getUserInfo() {
           reject(new Error('getUserInfo fail: ' + msg));
         }
       });
+    }
+
+    if (typeof tt.requestAuthCode === 'function') {
+      tt.requestAuthCode({
+        appId: CONFIG.APP_ID,
+        success: function(res) { exchangeCode(res.code); },
+        fail: function(err) {
+          // requestAuthCode gagal — coba fallback
+          console.warn('requestAuthCode failed, trying fallback:', err);
+          fallbackGetUserInfo();
+        }
+      });
+    } else {
+      fallbackGetUserInfo();
     }
   });
 }
