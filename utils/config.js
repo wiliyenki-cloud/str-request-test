@@ -22,5 +22,11 @@ var CONFIG = {
   // ICO user open_ids — admins maintain this list manually
   ICO_USER_IDS: [],   // e.g. ['ou_xxxxxxxxxxxxxxxx', 'ou_yyyyyyyyyyyyyyyy']
 
+  // Lark App ID (dari Developer Console > Credentials & Basic Info)
+  APP_ID: '',         // isi dengan cli_xxxx
+
+  // Google Apps Script deployment URL (setelah GAS di-deploy)
+  GAS_URL: '',        // isi dengan https://script.google.com/macros/s/xxx/exec
+
   API_BASE: 'https://open.larksuite.com'
 };
