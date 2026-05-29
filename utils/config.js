@@ -23,10 +23,10 @@ var CONFIG = {
   ICO_USER_IDS: [],   // e.g. ['ou_xxxxxxxxxxxxxxxx', 'ou_yyyyyyyyyyyyyyyy']
 
   // Lark App ID (dari Developer Console > Credentials & Basic Info)
-  APP_ID: '',         // isi dengan cli_xxxx
+  APP_ID: 'cli_aa9317810ab8ded4',         // isi dengan cli_xxxx
 
   // Google Apps Script deployment URL (setelah GAS di-deploy)
-  GAS_URL: '',        // isi dengan https://script.google.com/macros/s/xxx/exec
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzrMwaLg05__oyenINj69tvTo43scfDEGgPNjSPHBq--LN0pS-6g6CCElG63pHxLwd7/exec',        // isi dengan https://script.google.com/macros/s/xxx/exec
 
   API_BASE: 'https://open.larksuite.com'
 };
