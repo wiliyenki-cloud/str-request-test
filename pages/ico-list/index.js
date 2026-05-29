@@ -24,9 +24,7 @@ function renderList(list) {
 
   container.querySelectorAll('.card').forEach(function(card) {
     card.addEventListener('click', function() {
-      tt.navigateTo({
-        url: '/pages/ico-detail/index?str=' + encodeURIComponent(card.dataset.str) + '&record=' + encodeURIComponent(card.dataset.record)
-      });
+      window.location.href = '../ico-detail/index.html?str=' + encodeURIComponent(card.dataset.str) + '&record=' + encodeURIComponent(card.dataset.record);
     });
   });
 }

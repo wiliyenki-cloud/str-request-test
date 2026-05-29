@@ -1,7 +1,7 @@
 var TABS_ALL = [
-  { id: 'str-list',  label: 'STR List',      icon: '📋', url: '/pages/str-list/index',  roles: ['manager','ico','default'] },
-  { id: 'approval',  label: 'Need Approval', icon: '✅', url: '/pages/approval/index',  roles: ['manager'] },
-  { id: 'ico-list',  label: 'Need Create',   icon: '📦', url: '/pages/ico-list/index',  roles: ['ico'] }
+  { id: 'str-list',  label: 'STR List',      icon: '📋', url: '../str-list/index.html',      roles: ['manager','ico','default'] },
+  { id: 'approval',  label: 'Need Approval', icon: '✅', url: '../approval/index.html',       roles: ['manager'] },
+  { id: 'ico-list',  label: 'Need Create',   icon: '📦', url: '../ico-list/index.html',       roles: ['ico'] }
 ];
 
 function showEl(id) {
@@ -23,7 +23,7 @@ function renderTabs(role) {
     el.addEventListener('click', function() {
       nav.querySelectorAll('.tab-item').forEach(function(x) { x.classList.remove('active'); });
       el.classList.add('active');
-      tt.navigateTo({ url: el.dataset.url });
+      window.location.href = el.dataset.url;
     });
   });
   // Activate first tab
@@ -40,7 +40,7 @@ function init() {
     // Check ICO first (simple array lookup)
     if (CONFIG.ICO_USER_IDS.indexOf(openId) !== -1) {
       renderTabs('ico');
-      tt.navigateTo({ url: '/pages/str-list/index' });
+      window.location.href = '../str-list/index.html';
       document.getElementById('screen-loading').style.display = 'none';
       return;
     }
@@ -56,7 +56,7 @@ function init() {
 
       var role = isManager ? 'manager' : 'default';
       renderTabs(role);
-      tt.navigateTo({ url: '/pages/str-list/index' });
+      window.location.href = '../str-list/index.html';
       document.getElementById('screen-loading').style.display = 'none';
     }).catch(function(err) {
       document.getElementById('err-text').textContent = 'Gagal memuat role: ' + (err.message || String(err));

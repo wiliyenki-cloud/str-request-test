@@ -202,7 +202,7 @@ document.getElementById('btn-confirm-done').addEventListener('click', function()
   }).then(function() {
     setActing(false);
     showToast('STR Done! PR: ' + prNumber, '#2e7d32');
-    setTimeout(function() { tt.navigateBack(); }, 1500);
+    setTimeout(function() { window.history.back(); }, 1500);
   }).catch(function(err) {
     showToast('Gagal: ' + (err.message || err), '#c62828');
     setActing(false);
@@ -243,7 +243,7 @@ document.getElementById('btn-confirm-reject').addEventListener('click', function
   }).then(function() {
     setActing(false);
     showToast('STR Rejected by ICO.', '#c62828');
-    setTimeout(function() { tt.navigateBack(); }, 1500);
+    setTimeout(function() { window.history.back(); }, 1500);
   }).catch(function(err) {
     showToast('Gagal: ' + (err.message || err), '#c62828');
     setActing(false);
@@ -254,7 +254,7 @@ document.getElementById('btn-confirm-reject').addEventListener('click', function
 var params = getParams();
 _strNumber = params.str || '';
 
-document.getElementById('btn-back').addEventListener('click', function() { tt.navigateBack(); });
+document.getElementById('btn-back').addEventListener('click', function() { window.history.back(); });
 
 if (!_strNumber) {
   document.getElementById('err-text').textContent = 'Parameter STR tidak ditemukan.';

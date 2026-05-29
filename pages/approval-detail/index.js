@@ -133,7 +133,7 @@ document.getElementById('btn-approve').addEventListener('click', function() {
   }).then(function() {
     setActing(false);
     showToast('STR Approved! → Waiting Create by ICO', '#2e7d32');
-    setTimeout(function() { tt.navigateBack(); }, 1500);
+    setTimeout(function() { window.history.back(); }, 1500);
   }).catch(function(err) {
     showToast('Approve gagal: ' + (err.message || err), '#c62828');
     setActing(false);
@@ -175,7 +175,7 @@ document.getElementById('btn-confirm-reject').addEventListener('click', function
   }).then(function() {
     setActing(false);
     showToast('STR Rejected.', '#c62828');
-    setTimeout(function() { tt.navigateBack(); }, 1500);
+    setTimeout(function() { window.history.back(); }, 1500);
   }).catch(function(err) {
     showToast('Reject gagal: ' + (err.message || err), '#c62828');
     setActing(false);
@@ -187,7 +187,7 @@ var params = getParams();
 _strNumber = params.str || '';
 _recordId  = params.record || '';
 
-document.getElementById('btn-back').addEventListener('click', function() { tt.navigateBack(); });
+document.getElementById('btn-back').addEventListener('click', function() { window.history.back(); });
 
 if (!_strNumber) {
   document.getElementById('err-text').textContent = 'Parameter STR tidak ditemukan.';

@@ -55,9 +55,7 @@ function renderList(records) {
   }).join('');
   container.querySelectorAll('.card').forEach(function(card) {
     card.addEventListener('click', function() {
-      tt.navigateTo({
-        url: '/pages/str-detail/index?str=' + encodeURIComponent(card.dataset.str) + '&record=' + card.dataset.record
-      });
+      window.location.href = '../str-detail/index.html?str=' + encodeURIComponent(card.dataset.str) + '&record=' + encodeURIComponent(card.dataset.record);
     });
   });
   show('screen-list');
