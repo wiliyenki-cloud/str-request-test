@@ -1,1 +1,62 @@
-// placeholder
+function show(id) {
+  ['screen-loading','screen-error','screen-empty','screen-list'].forEach(function(s) {
+    document.getElementById(s).style.display = (s === id) ? '' : 'none';
+  });
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmtDate(ms) { if (!ms) return '-'; return new Date(ms).toLocaleDateString('id-ID'); }
+
+function renderList(list) {
+  var container = document.getElementById('list-container');
+  container.innerHTML = list.map(function(item) {
+    return '<div class="card" data-str="' + escHtml(item.strNumber) + '" data-record="' + escHtml(item.recordId) + '">' +
+      '<div class="card-header"><span class="str-num">' + escHtml(item.strNumber) + '</span><span class="badge-ico">Waiting Create</span></div>' +
+      '<div class="card-row"><span class="lbl">Site</span><span>' + escHtml(item.site) + (item.siteName ? ' — ' + escHtml(item.siteName) : '') + '</span></div>' +
+      '<div class="card-row"><span class="lbl">Dept</span><span>' + escHtml(item.department) + '</span></div>' +
+      '<div class="card-row"><span class="lbl">Submit</span><span>' + escHtml(item.submitDate) + '</span></div>' +
+      '<div class="card-row"><span class="lbl">Plan Receive</span><span>' + escHtml(item.planReceiveDate) + '</span></div>' +
+    '</div>';
+  }).join('');
+
+  container.querySelectorAll('.card').forEach(function(card) {
+    card.addEventListener('click', function() {
+      tt.navigateTo({
+        url: '/pages/ico-detail/index?str=' + encodeURIComponent(card.dataset.str) + '&record=' + encodeURIComponent(card.dataset.record)
+      });
+    });
+  });
+}
+
+function loadList() {
+  show('screen-loading');
+  larkSearch(
+    CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
+    { conjunction: 'AND', conditions: [{ field_name: 'Status', operator: 'is', value: [CONFIG.STATUS_WAITING_ICO] }] }
+  ).then(function(records) {
+    var list = records.map(function(r) {
+      return {
+        recordId:       r.record_id,
+        strNumber:      fieldText(r.fields['STR Number']),
+        site:           fieldText(r.fields['Site']),
+        siteName:       fieldText(r.fields['Site Name']),
+        department:     fieldText(r.fields['Department']),
+        submitDate:     fmtDate(r.fields['Submit Date']),
+        planReceiveDate: fmtDate(r.fields['Plan Receive Date'])
+      };
+    });
+    if (list.length === 0) { show('screen-empty'); return; }
+    renderList(list);
+    show('screen-list');
+  }).catch(function(err) {
+    document.getElementById('err-text').textContent = 'Gagal memuat: ' + (err.message || String(err));
+    show('screen-error');
+  });
+}
+
+document.getElementById('btn-retry').addEventListener('click', loadList);
+document.addEventListener('visibilitychange', function() { if (!document.hidden) loadList(); });
+loadList();
