@@ -1,0 +1,18 @@
+{
+  "appId": "GANTI_DENGAN_APP_ID",
+  "pages": [
+    "pages/home/index",
+    "pages/str-list/index",
+    "pages/str-detail/index",
+    "pages/approval/index",
+    "pages/approval-detail/index",
+    "pages/ico-list/index",
+    "pages/ico-detail/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "STR Manager",
+    "navigationBarBackgroundColor": "#111111",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f5f5"
+  }
+}
