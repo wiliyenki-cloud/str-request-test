@@ -1,1 +1,39 @@
-<!DOCTYPE html><html><body>loading...</body></html>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Approve STR</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div class="page">
+    <div id="screen-loading" class="center-msg"><p>Memuat detail...</p></div>
+    <div id="screen-error" class="center-msg" style="display:none"><p id="err-text" class="err-text"></p></div>
+    <div id="screen-content" style="display:none">
+      <div class="section" id="section-header"></div>
+      <div class="section">
+        <div class="section-title" id="items-title">Item List</div>
+        <div class="table-wrap" id="items-table"></div>
+      </div>
+      <div class="section" id="section-reject" style="display:none">
+        <div class="section-title">Alasan Reject *</div>
+        <textarea id="reject-reason" class="reject-input" placeholder="Tuliskan alasan reject..."></textarea>
+      </div>
+    </div>
+    <div id="toast" class="toast" style="display:none"></div>
+    <div class="footer" id="footer-main" style="display:none">
+      <button class="btn-reject" id="btn-start-reject">Reject</button>
+      <button class="btn-approve" id="btn-approve">Approve</button>
+    </div>
+    <div class="footer" id="footer-reject" style="display:none">
+      <button class="btn-cancel" id="btn-cancel-reject">Batal</button>
+      <button class="btn-confirm-reject" id="btn-confirm-reject" disabled>Konfirmasi Reject</button>
+    </div>
+  </div>
+  <script src="/utils/config.js"></script>
+  <script src="/utils/auth.js"></script>
+  <script src="/utils/api.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
