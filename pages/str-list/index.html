@@ -1,1 +1,35 @@
-<!DOCTYPE html><html><body>loading...</body></html>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STR List</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div class="page">
+    <!-- Filter tabs -->
+    <div class="filter-tabs" id="filter-tabs">
+      <div class="filter-tab active" data-filter="all">All</div>
+      <div class="filter-tab" data-filter="waiting-mgr">Waiting Approval</div>
+      <div class="filter-tab" data-filter="waiting-ico">Waiting Create</div>
+      <div class="filter-tab" data-filter="done">Done</div>
+      <div class="filter-tab" data-filter="reject">Reject</div>
+    </div>
+
+    <div id="screen-loading" class="center-msg"><p>Memuat data...</p></div>
+    <div id="screen-error" class="center-msg" style="display:none">
+      <p id="err-text" class="err-text"></p>
+      <button id="btn-retry" class="btn-retry">Coba Lagi</button>
+    </div>
+    <div id="screen-empty" class="center-msg" style="display:none"><p>Tidak ada data STR.</p></div>
+    <div id="screen-list" style="display:none">
+      <div id="list-container" class="list"></div>
+    </div>
+  </div>
+  <script src="/utils/config.js"></script>
+  <script src="/utils/auth.js"></script>
+  <script src="/utils/api.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
