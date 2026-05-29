@@ -85,7 +85,9 @@ function renderItems(items) {
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
 }
 
-// CSV download using data URI + hidden anchor
+// CSV download using data URI + hidden anchor.
+// NOTE: anchor.click() with download attribute may not work in some Lark WebView versions.
+// If download silently fails during testing, use tt.saveFile() instead.
 function downloadCsv() {
   var BOM = '﻿';  // UTF-8 BOM for Excel compatibility
   var header = 'No,Article,Description,Stock Qty,Sales Qty,Request Qty,Reason\n';
@@ -120,6 +122,7 @@ function loadDetail() {
     var h = headerRecords[0];
     _recordId = h.record_id;
 
+    // Note: larkSearch uses page_size 500. In practice STR forms cap at 10 items so no truncation.
     return larkSearch(
       CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_DETAIL_TABLE_ID,
       { conjunction: 'AND', conditions: [{ field_name: 'STR Number', operator: 'is', value: [_strNumber] }] }
@@ -179,6 +182,7 @@ document.getElementById('btn-cancel-pr').addEventListener('click', function() {
   document.getElementById('section-pr').style.display = 'none';
   document.getElementById('pr-number-input').value = '';
   document.getElementById('btn-confirm-done').disabled = true;
+  setActing(false);
   showFooter('footer-main');
 });
 
@@ -218,6 +222,7 @@ document.getElementById('btn-cancel-reject').addEventListener('click', function(
   document.getElementById('section-reject').style.display = 'none';
   document.getElementById('reject-reason').value = '';
   document.getElementById('btn-confirm-reject').disabled = true;
+  setActing(false);
   showFooter('footer-main');
 });
 
@@ -245,10 +250,9 @@ document.getElementById('btn-confirm-reject').addEventListener('click', function
   });
 });
 
-// Init
+// Init — _recordId is set by loadDetail() after re-fetching header by STR Number
 var params = getParams();
 _strNumber = params.str || '';
-_recordId  = params.record || '';
 
 document.getElementById('btn-back').addEventListener('click', function() { tt.navigateBack(); });
 
