@@ -51,7 +51,7 @@ function loadList() {
 
       larkSearch(
         CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
-        { conjunction: 'AND', conditions: [{ field_name: 'Status', operator: 'is', value: [CONFIG.STATUS_WAITING_MGR] }] }
+        { conjunction: 'and', conditions: [{ field_name: 'Status', operator: 'is', value: [CONFIG.STATUS_WAITING_MGR] }] }
       ).then(function(strRecords) {
         var list = strRecords
           .filter(function(r) { return mySites.indexOf(fieldText(r.fields['Site'])) !== -1; })

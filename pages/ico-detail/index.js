@@ -116,7 +116,7 @@ function loadDetail() {
   show('screen-loading');
   larkSearch(
     CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
-    { conjunction: 'AND', conditions: [{ field_name: 'STR Number', operator: 'is', value: [_strNumber] }] }
+    { conjunction: 'and', conditions: [{ field_name: 'STR Number', operator: 'is', value: [_strNumber] }] }
   ).then(function(headerRecords) {
     if (headerRecords.length === 0) throw new Error('STR tidak ditemukan');
     var h = headerRecords[0];
@@ -125,7 +125,7 @@ function loadDetail() {
     // Note: larkSearch uses page_size 500. In practice STR forms cap at 10 items so no truncation.
     return larkSearch(
       CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_DETAIL_TABLE_ID,
-      { conjunction: 'AND', conditions: [{ field_name: 'STR Number', operator: 'is', value: [_strNumber] }] }
+      { conjunction: 'and', conditions: [{ field_name: 'STR Number', operator: 'is', value: [_strNumber] }] }
     ).then(function(detailRecords) {
       detailRecords.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
 

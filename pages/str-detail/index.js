@@ -1,4 +1,4 @@
-﻿function getParams() {
+function getParams() {
   var qs = location.search.substring(1);
   var params = {};
   qs.split('&').forEach(function(p) {
@@ -35,7 +35,7 @@ function renderHeader(h) {
   var rows = [
     ['STR Number',    '<span class="bold">' + escHtml(h.strNumber) + '</span>'],
     ['Status',        '<span class="badge ' + statusBadgeClass(h.status) + '">' + escHtml(h.status) + '</span>'],
-    ['Site',          escHtml(h.site) + (h.siteName ? ' — ' + escHtml(h.siteName) : '')],
+    ['Site',          escHtml(h.site) + (h.siteName ? ' � ' + escHtml(h.siteName) : '')],
     ['Type STR',      escHtml(h.typeStr)],
     ['Supplying Site',escHtml(h.supplyingSite)],
     ['Department',    escHtml(h.department)],
@@ -72,14 +72,14 @@ function loadDetail() {
 
   larkSearch(
     CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
-    { conjunction: 'AND', conditions: [{ field_name: 'STR Number', operator: 'is', value: [strNumber] }] }
+    { conjunction: 'and', conditions: [{ field_name: 'STR Number', operator: 'is', value: [strNumber] }] }
   ).then(function(headerRecords) {
     if (headerRecords.length === 0) throw new Error('STR tidak ditemukan');
     var h = headerRecords[0];
 
     return larkSearch(
       CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_DETAIL_TABLE_ID,
-      { conjunction: 'AND', conditions: [{ field_name: 'STR Number', operator: 'is', value: [strNumber] }] }
+      { conjunction: 'and', conditions: [{ field_name: 'STR Number', operator: 'is', value: [strNumber] }] }
     ).then(function(detailRecords) {
       detailRecords.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
 
