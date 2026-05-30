@@ -57,7 +57,7 @@ function renderList(records) {
   if (filtered.length === 0) { show('screen-empty'); return; }
   var container = document.getElementById('list-container');
   container.innerHTML = filtered.map(function(item) {
-    return '<div class="card" data-str="' + escHtml(item.strNumber) + '" data-record="' + escHtml(item.recordId) + '">' +
+    return '<div class="card" data-str="' + escHtml(item.strNumber) + '" data-record="' + escHtml(item.recordId) + '" data-status="' + escHtml(item.status) + '">' +
       '<div class="card-header">' +
         '<span class="str-num">' + escHtml(item.strNumber) + '</span>' +
         '<span class="badge ' + statusBadgeClass(item.status) + '">' + escHtml(item.status) + '</span>' +
@@ -71,7 +71,17 @@ function renderList(records) {
   }).join('');
   container.querySelectorAll('.card').forEach(function(card) {
     card.addEventListener('click', function() {
-      window.location.href = '../str-detail/index.html?str=' + encodeURIComponent(card.dataset.str) + '&record=' + encodeURIComponent(card.dataset.record);
+      var s   = card.dataset.status;
+      var qs  = '?str=' + encodeURIComponent(card.dataset.str) + '&record=' + encodeURIComponent(card.dataset.record);
+      var dest;
+      if (s === CONFIG.STATUS_WAITING_MGR) {
+        dest = '../approval-detail/index.html' + qs;
+      } else if (s === CONFIG.STATUS_WAITING_ICO) {
+        dest = '../ico-detail/index.html' + qs;
+      } else {
+        dest = '../str-detail/index.html' + qs;
+      }
+      window.location.href = dest;
     });
   });
   show('screen-list');
