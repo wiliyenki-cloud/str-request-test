@@ -1,42 +1,33 @@
-// getUserInfo — tries requestAuthCode (to get openId) then falls back gracefully.
-// NOTE: gasProxy from api.js is used here; api.js must be loaded before auth.js is CALLED
-// (order in HTML doesn't matter — by runtime call time all scripts are loaded).
+// getUserInfo — withCredentials:true returns openId for published H5 apps.
+// No extra scope needed. Falls back to anonymous if session invalid.
 
 function getUserInfo() {
   return new Promise(function(resolve) {
-    // Outside Lark WebView (e.g. desktop browser) — anonymous
-    if (typeof tt === 'undefined' || typeof tt.requestAuthCode !== 'function') {
+    if (typeof tt === 'undefined' || typeof tt.getUserInfo !== 'function') {
       resolve({ openId: '', nickName: 'User' });
       return;
     }
 
-    tt.requestAuthCode({
-      appId: CONFIG.APP_ID,
+    // withCredentials:true → Lark returns openId (requires published app + trusted domain)
+    tt.getUserInfo({
+      withCredentials: true,
       success: function(res) {
-        // Exchange auth code via GAS to get openId
-        gasProxy({ action: 'getUserByCode', code: res.code })
-          .then(function(data) {
-            resolve({ openId: data.openId || '', nickName: data.nickName || 'User' });
-          })
-          .catch(function() {
-            // GAS exchange failed (e.g. network) — anonymous
-            resolve({ openId: '', nickName: 'User' });
-          });
+        var info = res.userInfo || res;
+        resolve({
+          openId:   info.openId   || info.open_id   || '',
+          nickName: info.nickName || info.nick_name  || info.displayName || 'User'
+        });
       },
       fail: function() {
-        // requestAuthCode failed (scope not granted etc.) — fall back to basic getUserInfo
-        if (typeof tt.getUserInfo === 'function') {
-          tt.getUserInfo({
-            withCredentials: false,
-            success: function(r) {
-              var info = r.userInfo || r;
-              resolve({ openId: '', nickName: info.nickName || info.nick_name || 'User' });
-            },
-            fail: function() { resolve({ openId: '', nickName: 'User' }); }
-          });
-        } else {
-          resolve({ openId: '', nickName: 'User' });
-        }
+        // Fallback: no openId but still get nickname
+        tt.getUserInfo({
+          withCredentials: false,
+          success: function(res) {
+            var info = res.userInfo || res;
+            resolve({ openId: '', nickName: info.nickName || info.nick_name || 'User' });
+          },
+          fail: function() { resolve({ openId: '', nickName: 'User' }); }
+        });
       }
     });
   });
