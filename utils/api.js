@@ -12,97 +12,60 @@ function fieldText(val) {
   return String(val);
 }
 
-// ─── JSONP helper (bypass CORS untuk GAS) ────────────────────────────────────
+// ─── JSONP — tidak kena CORS, semua call ke Lark via GAS proxy ───────────────
 function jsonpFetch(url) {
   return new Promise(function(resolve, reject) {
     var cbName = '_cb' + Date.now() + Math.floor(Math.random() * 1e6);
     var script = document.createElement('script');
-    var timer = setTimeout(function() {
-      cleanup();
-      reject(new Error('JSONP timeout'));
-    }, 15000);
+    var timer  = setTimeout(function() {
+      cleanup(); reject(new Error('Timeout koneksi ke server'));
+    }, 20000);
     function cleanup() {
       clearTimeout(timer);
       try { delete window[cbName]; } catch(e) {}
       if (script.parentNode) script.parentNode.removeChild(script);
     }
     window[cbName] = function(data) { cleanup(); resolve(data); };
-    script.onerror = function() { cleanup(); reject(new Error('JSONP load error')); };
+    script.onerror  = function() { cleanup(); reject(new Error('Gagal koneksi ke server')); };
     script.src = url + '&callback=' + cbName;
     document.head.appendChild(script);
   });
 }
 
-// ─── Token cache ─────────────────────────────────────────────────────────────
-var _larkToken = null;
-var _tokenFetching = null;
-
-function getLarkApiToken() {
-  if (_larkToken) return Promise.resolve(_larkToken);
-  if (_tokenFetching) return _tokenFetching;
-  _tokenFetching = jsonpFetch(CONFIG.GAS_URL + '?action=getToken')
+function gasProxy(params) {
+  var qs = Object.keys(params).map(function(k) {
+    return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+  }).join('&');
+  return jsonpFetch(CONFIG.GAS_URL + '?' + qs)
     .then(function(data) {
-      if (data.status !== 'ok') throw new Error('getToken: ' + data.message);
-      _larkToken = data.data.token;
-      _tokenFetching = null;
-      // Token berlaku 2 jam — clear setelah 90 menit
-      setTimeout(function() { _larkToken = null; }, 90 * 60 * 1000);
-      return _larkToken;
+      if (data.status !== 'ok') throw new Error(data.message || JSON.stringify(data));
+      return data.data;
     });
-  return _tokenFetching;
 }
 
-// ─── Lark Bitable helpers ─────────────────────────────────────────────────────
+// ─── Lark Bitable helpers (via GAS proxy) ────────────────────────────────────
 
 function larkSearch(appToken, tableId, filter, pageSize) {
-  return getLarkApiToken().then(function(token) {
-    var body = { page_size: pageSize || 500 };
-    if (filter) body.filter = filter;
-    return fetch(
-      CONFIG.API_BASE + '/open-apis/bitable/v1/apps/' + appToken + '/tables/' + tableId + '/records/search',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify(body)
-      }
-    ).then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.code === 0) return d.data.items || [];
-      throw new Error('larkSearch error: code=' + d.code + ' msg=' + d.msg);
-    });
-  });
+  var params = { action: 'larkSearch', appToken: appToken, tableId: tableId, pageSize: pageSize || 500 };
+  if (filter) params.filter = JSON.stringify(filter);
+  return gasProxy(params).then(function(d) { return d.items || []; });
 }
 
 function larkUpdate(appToken, tableId, recordId, fields) {
-  return getLarkApiToken().then(function(token) {
-    return fetch(
-      CONFIG.API_BASE + '/open-apis/bitable/v1/apps/' + appToken + '/tables/' + tableId + '/records/' + recordId,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ fields: fields })
-      }
-    ).then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.code === 0) return d.data.record;
-      throw new Error('larkUpdate error: code=' + d.code + ' msg=' + d.msg);
-    });
-  });
+  return gasProxy({
+    action: 'larkUpdate',
+    appToken: appToken,
+    tableId: tableId,
+    recordId: recordId,
+    fields: JSON.stringify(fields)
+  }).then(function(d) { return d.record || d; });
 }
 
 function larkCreate(appToken, tableId, fields) {
-  return getLarkApiToken().then(function(token) {
-    return fetch(
-      CONFIG.API_BASE + '/open-apis/bitable/v1/apps/' + appToken + '/tables/' + tableId + '/records',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ fields: fields })
-      }
-    ).then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.code === 0) return d.data.record;
-      throw new Error('larkCreate error: code=' + d.code + ' msg=' + d.msg);
-    });
-  });
+  return gasProxy({
+    action: 'larkCreate',
+    appToken: appToken,
+    tableId: tableId,
+    fields: JSON.stringify(fields)
+  }).then(function(d) { return d.record || d; });
 }
