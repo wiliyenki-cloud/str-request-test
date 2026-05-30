@@ -351,7 +351,7 @@ function renderMasterDetail() {
         '<td>' + escHtml(d.description)  + '</td>' +
         '<td class="num">' + escHtml(String(d.requestQty)) + '</td>' +
         '<td>' + escHtml(d.supplyingSite)+ '</td>' +
-        '<td>' + escHtml(d.prNumber)     + '</td>' +
+        '<td>' + (d.prNumber ? '<span class="pr-val">' + escHtml(d.prNumber) + '</span>' : '') + '</td>' +
       '</tr>';
     }).join('') +
     '</tbody></table></div>';
