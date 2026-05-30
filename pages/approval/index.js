@@ -35,52 +35,27 @@ function renderList(list) {
 
 function loadList() {
   show('screen-loading');
-  getUserInfo().then(function(user) {
-    var openId = user.openId;
-    larkSearch(CONFIG.MASTER_BASE_APP_TOKEN, CONFIG.MASTER_SITE_TABLE_ID, null).then(function(siteRecords) {
-      var mySites = siteRecords
-        .filter(function(r) {
-          var smUsers = r.fields[CONFIG.MASTER_SM_USER_FIELD];
-          if (!smUsers) return false;
-          var arr = Array.isArray(smUsers) ? smUsers : [smUsers];
-          return arr.some(function(u) { return (u.id || u.open_id || u.openId) === openId; });
-        })
-        .map(function(r) { return fieldText(r.fields[CONFIG.MASTER_SITE_FIELD]); });
-
-      if (mySites.length === 0) { show('screen-empty'); return; }
-
-      larkSearch(
-        CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
-        { conjunction: 'and', conditions: [{ field_name: 'Status', operator: 'is', value: [CONFIG.STATUS_WAITING_MGR] }] }
-      ).then(function(strRecords) {
-        var list = strRecords
-          .filter(function(r) { return mySites.indexOf(fieldText(r.fields['Site'])) !== -1; })
-          .map(function(r) {
-            return {
-              recordId:    r.record_id,
-              strNumber:   fieldText(r.fields['STR Number']),
-              site:        fieldText(r.fields['Site']),
-              siteName:    fieldText(r.fields['Site Name']),
-              typeStr:     fieldText(r.fields['Type STR']),
-              department:  fieldText(r.fields['Department']),
-              requestedBy: fieldText(r.fields['Requested By']),
-              submitDate:  fmtDate(r.fields['Submit Date'])
-            };
-          });
-
-        if (list.length === 0) { show('screen-empty'); return; }
-        renderList(list);
-        show('screen-list');
-      }).catch(function(err) {
-        document.getElementById('err-text').textContent = 'Gagal memuat STR: ' + (err.message || String(err));
-        show('screen-error');
-      });
-    }).catch(function(err) {
-      document.getElementById('err-text').textContent = 'Gagal memuat site: ' + (err.message || String(err));
-      show('screen-error');
+  larkSearch(
+    CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
+    { conjunction: 'and', conditions: [{ field_name: 'Status', operator: 'is', value: [CONFIG.STATUS_WAITING_MGR] }] }
+  ).then(function(strRecords) {
+    var list = strRecords.map(function(r) {
+      return {
+        recordId:    r.record_id,
+        strNumber:   fieldText(r.fields['STR Number']),
+        site:        fieldText(r.fields['Site']),
+        siteName:    fieldText(r.fields['Site Name']),
+        typeStr:     fieldText(r.fields['Type STR']),
+        department:  fieldText(r.fields['Department']),
+        requestedBy: fieldText(r.fields['Requested By']),
+        submitDate:  fmtDate(r.fields['Submit Date'])
+      };
     });
+    if (list.length === 0) { show('screen-empty'); return; }
+    renderList(list);
+    show('screen-list');
   }).catch(function(err) {
-    document.getElementById('err-text').textContent = 'Gagal login: ' + (err.message || String(err));
+    document.getElementById('err-text').textContent = 'Gagal memuat: ' + (err.message || String(err));
     show('screen-error');
   });
 }
