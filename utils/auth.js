@@ -1,73 +1,41 @@
-// getUserInfo — tries multiple methods to get user identity.
-// Logs each step to the debug panel so we can see exactly what fails.
+// getUserInfo — getUserInfo (both variants) returns errCode:105 in this H5 context.
+// Use requestAuthCode as primary method to get openId via GAS exchange.
+// Falls back to anonymous if requestAuthCode also fails.
 
 function getUserInfo() {
   return new Promise(function(resolve) {
-    if (typeof tt === 'undefined' || typeof tt.getUserInfo !== 'function') {
-      if (typeof dbg === 'function') dbg('auth: tt SDK not available');
+    if (typeof tt === 'undefined') {
+      if (typeof dbg === 'function') dbg('auth: tt not available (browser mode)');
       resolve({ openId: '', nickName: 'User' });
       return;
     }
 
-    // Step 1: Try withCredentials:true (should return openId for published H5 apps)
-    if (typeof dbg === 'function') dbg('auth: trying withCredentials:true...');
-    tt.getUserInfo({
-      withCredentials: true,
+    if (typeof tt.requestAuthCode !== 'function') {
+      if (typeof dbg === 'function') dbg('auth: requestAuthCode not available');
+      resolve({ openId: '', nickName: 'User' });
+      return;
+    }
+
+    if (typeof dbg === 'function') dbg('auth: trying requestAuthCode appId=' + CONFIG.APP_ID);
+    tt.requestAuthCode({
+      appId: CONFIG.APP_ID,
       success: function(res) {
-        var raw = JSON.stringify(res || {});
-        if (typeof dbg === 'function') dbg('auth: wC:true SUCCESS raw=' + raw.slice(0, 150));
-        var info   = res.userInfo || res;
-        var openId = info.openId || info.open_id || info.userId || info.union_id || '';
-        var nick   = info.nickName || info.nick_name || info.displayName || info.name || 'User';
-        if (typeof dbg === 'function') dbg('auth: openId=' + (openId || '(empty)') + ' nick=' + nick);
-        resolve({ openId: openId, nickName: nick });
+        if (typeof dbg === 'function') dbg('auth: authCode OK code=' + String(res.code || '').slice(0, 15) + '...');
+        // Exchange code via GAS to get openId (requires GAS to be deployed with latest Code.gs)
+        gasProxy({ action: 'getUserByCode', code: res.code })
+          .then(function(data) {
+            if (typeof dbg === 'function') dbg('auth: GAS exchange OK openId=' + (data.openId || '(empty)') + ' nick=' + data.nickName);
+            resolve({ openId: data.openId || '', nickName: data.nickName || 'User' });
+          })
+          .catch(function(e) {
+            if (typeof dbg === 'function') dbg('auth: GAS exchange FAIL — ' + (e.message || String(e)));
+            if (typeof dbg === 'function') dbg('auth: → pastikan GAS sudah di-redeploy dengan Code.gs terbaru!');
+            resolve({ openId: '', nickName: 'User' });
+          });
       },
       fail: function(err) {
-        if (typeof dbg === 'function') dbg('auth: wC:true FAIL err=' + JSON.stringify(err || {}).slice(0, 100));
-
-        // Step 2: Try withCredentials:false (gets nickName at least, no openId)
-        if (typeof dbg === 'function') dbg('auth: trying withCredentials:false...');
-        tt.getUserInfo({
-          withCredentials: false,
-          success: function(res) {
-            var raw = JSON.stringify(res || {});
-            if (typeof dbg === 'function') dbg('auth: wC:false SUCCESS raw=' + raw.slice(0, 150));
-            var info = res.userInfo || res;
-            var nick = info.nickName || info.nick_name || info.displayName || info.name || 'User';
-            if (typeof dbg === 'function') dbg('auth: nick=' + nick + ' (no openId from wC:false)');
-
-            // Step 3: Try requestAuthCode to get openId via GAS exchange
-            if (typeof tt.requestAuthCode === 'function' && typeof gasProxy === 'function') {
-              if (typeof dbg === 'function') dbg('auth: trying requestAuthCode...');
-              tt.requestAuthCode({
-                appId: CONFIG.APP_ID,
-                success: function(r) {
-                  if (typeof dbg === 'function') dbg('auth: authCode OK, exchanging via GAS...');
-                  gasProxy({ action: 'getUserByCode', code: r.code })
-                    .then(function(data) {
-                      if (typeof dbg === 'function') dbg('auth: GAS exchange OK openId=' + (data.openId || '(empty)'));
-                      resolve({ openId: data.openId || '', nickName: data.nickName || nick });
-                    })
-                    .catch(function(e) {
-                      if (typeof dbg === 'function') dbg('auth: GAS exchange FAIL err=' + (e.message || String(e)));
-                      resolve({ openId: '', nickName: nick });
-                    });
-                },
-                fail: function(e) {
-                  if (typeof dbg === 'function') dbg('auth: requestAuthCode FAIL err=' + JSON.stringify(e || {}).slice(0, 100));
-                  resolve({ openId: '', nickName: nick });
-                }
-              });
-            } else {
-              if (typeof dbg === 'function') dbg('auth: requestAuthCode not available, giving up');
-              resolve({ openId: '', nickName: nick });
-            }
-          },
-          fail: function(err2) {
-            if (typeof dbg === 'function') dbg('auth: wC:false FAIL err=' + JSON.stringify(err2 || {}).slice(0, 100));
-            resolve({ openId: '', nickName: 'User' });
-          }
-        });
+        if (typeof dbg === 'function') dbg('auth: requestAuthCode FAIL err=' + JSON.stringify(err || {}).slice(0, 150));
+        resolve({ openId: '', nickName: 'User' });
       }
     });
   });
