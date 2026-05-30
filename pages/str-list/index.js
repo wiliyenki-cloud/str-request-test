@@ -3,8 +3,18 @@ var _activeFilter = 'all';
 var _currentUser  = { openId: '', nickName: 'User' };
 var _mySites      = [];
 var _searchText   = '';
-var _dateFrom     = '';   // 'YYYY-MM-DD'
-var _dateTo       = '';   // 'YYYY-MM-DD'
+
+// ── Default date range: 1st of current month → today ─────────────────────────
+function toDateInput(d) {
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart ? String(d.getMonth() + 1).padStart(2, '0') : (d.getMonth() + 1 < 10 ? '0' + (d.getMonth() + 1) : '' + (d.getMonth() + 1));
+  var day = d.getDate() < 10 ? '0' + d.getDate() : '' + d.getDate();
+  return y + '-' + m + '-' + day;
+}
+var _today          = new Date();
+var _firstOfMonth   = new Date(_today.getFullYear(), _today.getMonth(), 1);
+var _dateFrom       = toDateInput(_firstOfMonth);   // 'YYYY-MM-DD'
+var _dateTo         = toDateInput(_today);           // 'YYYY-MM-DD'
 
 function statusBadgeClass(status) {
   if (status === CONFIG.STATUS_WAITING_MGR) return 'badge-waiting-mgr';
@@ -109,6 +119,7 @@ function renderList(records) {
       '</div>' +
       '<div class="card-row"><span class="lbl">Site</span><span>' + escHtml(item.site) + (item.siteName ? ' — ' + escHtml(item.siteName) : '') + '</span></div>' +
       '<div class="card-row"><span class="lbl">Department</span><span>' + escHtml(item.department) + '</span></div>' +
+      (item.requestedBy ? '<div class="card-row"><span class="lbl">Requester</span><span>' + escHtml(item.requestedBy) + '</span></div>' : '') +
       '<div class="card-row"><span class="lbl">Submit Date</span><span>' + escHtml(item.submitDate) + '</span></div>' +
       '<div class="card-row"><span class="lbl">Plan Receive</span><span>' + escHtml(item.planReceiveDate) + '</span></div>' +
       (item.prNumber ? '<div class="card-row"><span class="lbl">PR Number</span><span>' + escHtml(item.prNumber) + '</span></div>' : '') +
@@ -255,6 +266,10 @@ document.getElementById('btn-clear-dates').addEventListener('click', function() 
   document.getElementById('date-to').value   = '';
   renderList(_allRecords);
 });
+
+// Set default date input values
+document.getElementById('date-from').value = _dateFrom;
+document.getElementById('date-to').value   = _dateTo;
 
 document.getElementById('btn-retry').addEventListener('click', loadList);
 document.addEventListener('visibilitychange', function() { if (!document.hidden) loadList(); });
