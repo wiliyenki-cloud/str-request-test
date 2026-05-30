@@ -249,6 +249,7 @@ function loadDetails() {
           site:         hdr.site          || '',
           siteName:     hdr.siteName      || '',
           department:   hdr.department    || '',
+          status:       hdr.status        || '',
           submitDate:   hdr.submitDate    || '-',
           submitDateRaw: hdr.submitDateRaw || 0,
           article:      fieldText(r.fields['Article']),
@@ -257,7 +258,12 @@ function loadDetails() {
           supplyingSite: hdr.supplyingSite || '',
           prNumber:     hdr.prNumber      || ''
         };
-      }).filter(function(d) { return !!d.site; }); // hanya header yg visible (role filter)
+      }).filter(function(d) {
+        // Hanya tampilkan: header visible (role) + status Done + sudah ada PR Number
+        return !!d.site &&
+               d.status === CONFIG.STATUS_DONE &&
+               !!d.prNumber;
+      });
       _detailsLoaded = true;
       if (typeof dbg === 'function') dbg('loadDetails: ' + _allDetails.length + ' rows');
       renderMasterDetail();
