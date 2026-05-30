@@ -10,27 +10,31 @@ var _CACHE_TTL   = 30 * 60 * 1000; // 30 menit
 
 function _saveCache(user) {
   _userInfoMem = user;
-  try {
-    localStorage.setItem(_CACHE_KEY, JSON.stringify({
-      openId:   user.openId,
-      nickName: user.nickName,
-      ts:       Date.now()
-    }));
-  } catch(e) {}
+  // Hanya simpan ke localStorage kalau openId ada (jangan cache anonymous)
+  if (user.openId) {
+    try {
+      localStorage.setItem(_CACHE_KEY, JSON.stringify({
+        openId:   user.openId,
+        nickName: user.nickName,
+        ts:       Date.now()
+      }));
+    } catch(e) {}
+  }
 }
 
 function _readCache() {
-  if (_userInfoMem) return _userInfoMem;
+  // Hanya gunakan cache kalau openId ada (abaikan anonymous yang tersimpan)
+  if (_userInfoMem && _userInfoMem.openId) return _userInfoMem;
   try {
     var raw = localStorage.getItem(_CACHE_KEY);
     if (!raw) return null;
     var c = JSON.parse(raw);
-    if (!c || !c.ts) return null;
+    if (!c || !c.ts || !c.openId) return null;   // abaikan cache anonymous
     if (Date.now() - c.ts > _CACHE_TTL) {
       localStorage.removeItem(_CACHE_KEY);
       return null;
     }
-    return { openId: c.openId || '', nickName: c.nickName || 'User' };
+    return { openId: c.openId, nickName: c.nickName || 'User' };
   } catch(e) { return null; }
 }
 
