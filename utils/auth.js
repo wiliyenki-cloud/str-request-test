@@ -37,6 +37,7 @@ function getUserInfo() {
     }
 
     // 3. requestAuthCode (only works when current page URL is in registered Redirect URLs)
+    if (typeof dbg === 'function') dbg('auth: PAGE_URL = ' + location.href);
     if (typeof dbg === 'function') dbg('auth: requestAuthCode from ' + location.pathname.split('/').pop() + '...');
     tt.requestAuthCode({
       appId: CONFIG.APP_ID,
@@ -63,6 +64,8 @@ function getUserInfo() {
         if (typeof dbg === 'function') dbg('auth: requestAuthCode FAIL ' + msg.slice(0, 120));
         var anon = { openId: '', nickName: 'User' };
         _userInfoMem = anon;
+        // Save anonymous to sessionStorage so other pages don't retry requestAuthCode
+        try { sessionStorage.setItem('_larkUser', JSON.stringify(anon)); } catch(e) {}
         resolve(anon);
       }
     });
