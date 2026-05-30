@@ -16,6 +16,12 @@ var _firstOfMonth   = new Date(_today.getFullYear(), _today.getMonth(), 1);
 var _dateFrom       = toDateInput(_firstOfMonth);   // 'YYYY-MM-DD'
 var _dateTo         = toDateInput(_today);           // 'YYYY-MM-DD'
 
+var _allDetails    = [];
+var _detailsLoaded = false;
+var _currentPage   = 1;
+var _pageSize      = 10;
+var _headerMap     = {};   // strNumber → mapped header record
+
 function statusBadgeClass(status) {
   if (status === CONFIG.STATUS_WAITING_MGR) return 'badge-waiting-mgr';
   if (status === CONFIG.STATUS_WAITING_ICO) return 'badge-waiting-ico';
@@ -102,12 +108,17 @@ function mapRecords(records) {
       submitDateRaw:   r.fields['Submit Date'] || 0,
       planReceiveDate: fmtDate(r.fields['Plan Receive Date']),
       prNumber:        fieldText(r.fields['PR Number']),
-      requestedBy:     fieldText(r.fields['Requested By'])
+      requestedBy:     fieldText(r.fields['Requested By']),
+      supplyingSite:   fieldText(r.fields['Supplying Site'])
     };
   });
 }
 
 function renderList(records) {
+  if (_activeFilter === 'master-detail') {
+    if (!_detailsLoaded) { loadDetails(); } else { renderMasterDetail(); }
+    return;
+  }
   var filtered = filterRecords(records, _activeFilter);
   if (filtered.length === 0) { show('screen-empty'); return; }
   var container = document.getElementById('list-container');
@@ -199,6 +210,11 @@ function loadList() {
       _mySites     = mySites;
       var visibleRecords = applyFilter(strRecords, user, mySites);
       _allRecords = mapRecords(visibleRecords);
+      // Build lookup map for Master Detail join; reset detail cache
+      _headerMap     = {};
+      _allRecords.forEach(function(h) { _headerMap[h.strNumber] = h; });
+      _detailsLoaded = false;
+      _allDetails    = [];
       renderList(_allRecords);
     }).catch(function(err) {
       if (typeof dbg === 'function') dbg('❌ fetch error: ' + (err.message || String(err)));
@@ -219,6 +235,159 @@ function loadList() {
   });
 }
 
+// ── Master Detail ─────────────────────────────────────────────────────────────
+
+function loadDetails() {
+  show('screen-loading');
+  larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_DETAIL_TABLE_ID, null)
+    .then(function(records) {
+      _allDetails = records.map(function(r) {
+        var strNum = fieldText(r.fields['STR Number']);
+        var hdr    = _headerMap[strNum] || {};
+        return {
+          strNumber:    strNum,
+          site:         hdr.site          || '',
+          siteName:     hdr.siteName      || '',
+          department:   hdr.department    || '',
+          submitDate:   hdr.submitDate    || '-',
+          submitDateRaw: hdr.submitDateRaw || 0,
+          article:      fieldText(r.fields['Article']),
+          description:  fieldText(r.fields['Description']),
+          requestQty:   fieldText(r.fields['Request QTY']),
+          supplyingSite: hdr.supplyingSite || '',
+          prNumber:     hdr.prNumber      || ''
+        };
+      }).filter(function(d) { return !!d.site; }); // hanya header yg visible (role filter)
+      _detailsLoaded = true;
+      if (typeof dbg === 'function') dbg('loadDetails: ' + _allDetails.length + ' rows');
+      renderMasterDetail();
+    })
+    .catch(function(err) {
+      if (typeof dbg === 'function') dbg('❌ loadDetails error: ' + (err.message || String(err)));
+      document.getElementById('err-text').textContent = 'Gagal memuat detail: ' + (err.message || String(err));
+      show('screen-error');
+    });
+}
+
+function filterDetails() {
+  var result = _allDetails;
+  if (_searchText) {
+    var q = _searchText.toLowerCase();
+    result = result.filter(function(d) {
+      return d.strNumber.toLowerCase().indexOf(q)   !== -1 ||
+             d.article.toLowerCase().indexOf(q)     !== -1 ||
+             d.description.toLowerCase().indexOf(q) !== -1;
+    });
+  }
+  if (_dateFrom) {
+    var from = dayStartMs(_dateFrom);
+    result = result.filter(function(d) { return d.submitDateRaw >= from; });
+  }
+  if (_dateTo) {
+    var to = dayEndMs(_dateTo);
+    result = result.filter(function(d) { return d.submitDateRaw <= to; });
+  }
+  return result;
+}
+
+function exportCSV(data) {
+  var cols = ['ID STR','SITE','DEPARTMENT','REQUEST DATE','ARTICLE','DESCRIPTION','REQUEST QTY','SUPPLYING SITE','NO PR'];
+  var rows = [cols.join(',')];
+  data.forEach(function(d) {
+    rows.push([
+      '"' + String(d.strNumber).replace(/"/g,'""')    + '"',
+      '"' + String(d.site).replace(/"/g,'""')         + '"',
+      '"' + String(d.department).replace(/"/g,'""')   + '"',
+      '"' + String(d.submitDate).replace(/"/g,'""')   + '"',
+      '"' + String(d.article).replace(/"/g,'""')      + '"',
+      '"' + String(d.description).replace(/"/g,'""')  + '"',
+      String(d.requestQty),
+      '"' + String(d.supplyingSite).replace(/"/g,'""')+ '"',
+      '"' + String(d.prNumber).replace(/"/g,'""')     + '"'
+    ].join(','));
+  });
+  var csv  = '﻿' + rows.join('\r\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'STR-Master-Detail-' + toDateInput(new Date()) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function renderMasterDetail() {
+  var filtered   = filterDetails();
+  var totalPages = Math.ceil(filtered.length / _pageSize) || 1;
+  if (_currentPage > totalPages) _currentPage = 1;
+  var start    = (_currentPage - 1) * _pageSize;
+  var pageData = filtered.slice(start, start + _pageSize);
+  var container = document.getElementById('list-container');
+
+  if (filtered.length === 0) { show('screen-empty'); return; }
+
+  // Toolbar
+  var toolbar = '<div class="tbl-toolbar">' +
+    '<span class="tbl-info">' + filtered.length + ' data</span>' +
+    '<button class="btn-export" id="btn-export-csv">&#128229; Export Excel</button>' +
+    '</div>';
+
+  // Table
+  var tbl = '<div class="tbl-wrap"><table class="str-table">' +
+    '<thead><tr>' +
+      '<th>ID STR</th><th>SITE</th><th>DEPT</th><th>REQ DATE</th>' +
+      '<th>ARTICLE</th><th>DESCRIPTION</th><th>REQ QTY</th>' +
+      '<th>SUPPLYING SITE</th><th>NO PR</th>' +
+    '</tr></thead><tbody>' +
+    pageData.map(function(d) {
+      return '<tr>' +
+        '<td>' + escHtml(d.strNumber)    + '</td>' +
+        '<td>' + escHtml(d.site)         + '</td>' +
+        '<td>' + escHtml(d.department)   + '</td>' +
+        '<td>' + escHtml(d.submitDate)   + '</td>' +
+        '<td>' + escHtml(d.article)      + '</td>' +
+        '<td>' + escHtml(d.description)  + '</td>' +
+        '<td class="num">' + escHtml(String(d.requestQty)) + '</td>' +
+        '<td>' + escHtml(d.supplyingSite)+ '</td>' +
+        '<td>' + escHtml(d.prNumber)     + '</td>' +
+      '</tr>';
+    }).join('') +
+    '</tbody></table></div>';
+
+  // Pagination
+  var pag = '';
+  if (totalPages > 1) {
+    var rangeStart = Math.max(1, _currentPage - 2);
+    var rangeEnd   = Math.min(totalPages, _currentPage + 2);
+    var pBtns = '';
+    if (rangeStart > 1) { pBtns += '<button class="pg-btn" data-page="1">1</button>'; if (rangeStart > 2) pBtns += '<span class="pg-ell">…</span>'; }
+    for (var i = rangeStart; i <= rangeEnd; i++) {
+      pBtns += '<button class="pg-btn' + (i === _currentPage ? ' pg-active' : '') + '" data-page="' + i + '">' + i + '</button>';
+    }
+    if (rangeEnd < totalPages) { if (rangeEnd < totalPages - 1) pBtns += '<span class="pg-ell">…</span>'; pBtns += '<button class="pg-btn" data-page="' + totalPages + '">' + totalPages + '</button>'; }
+    pag = '<div class="pagination">' +
+      '<button class="pg-btn" id="pg-prev"' + (_currentPage === 1 ? ' disabled' : '') + '>&#8249;</button>' +
+      pBtns +
+      '<button class="pg-btn" id="pg-next"' + (_currentPage === totalPages ? ' disabled' : '') + '>&#8250;</button>' +
+    '</div>';
+  }
+
+  container.innerHTML = toolbar + tbl + pag;
+
+  document.getElementById('btn-export-csv').addEventListener('click', function() { exportCSV(filtered); });
+  container.querySelectorAll('.pg-btn[data-page]').forEach(function(btn) {
+    btn.addEventListener('click', function() { _currentPage = parseInt(btn.dataset.page, 10); renderMasterDetail(); });
+  });
+  var prev = document.getElementById('pg-prev');
+  var next = document.getElementById('pg-next');
+  if (prev) prev.addEventListener('click', function() { if (_currentPage > 1) { _currentPage--; renderMasterDetail(); } });
+  if (next) next.addEventListener('click', function() { if (_currentPage < totalPages) { _currentPage++; renderMasterDetail(); } });
+
+  show('screen-list');
+}
+
 // ── Event listeners ───────────────────────────────────────────────────────────
 
 // Back → home
@@ -232,6 +401,7 @@ document.getElementById('filter-tabs').querySelectorAll('.filter-tab').forEach(f
     document.querySelectorAll('.filter-tab').forEach(function(t) { t.classList.remove('active'); });
     tab.classList.add('active');
     _activeFilter = tab.dataset.filter;
+    _currentPage  = 1;
     renderList(_allRecords);
   });
 });
@@ -242,26 +412,30 @@ document.getElementById('search-input').addEventListener('input', function() {
   clearTimeout(_searchTimer);
   var val = this.value;
   _searchTimer = setTimeout(function() {
-    _searchText = val.trim();
+    _searchText  = val.trim();
+    _currentPage = 1;
     renderList(_allRecords);
   }, 300);
 });
 
 // Date from
 document.getElementById('date-from').addEventListener('change', function() {
-  _dateFrom = this.value;
+  _dateFrom    = this.value;
+  _currentPage = 1;
   renderList(_allRecords);
 });
 
 // Date to
 document.getElementById('date-to').addEventListener('change', function() {
-  _dateTo = this.value;
+  _dateTo      = this.value;
+  _currentPage = 1;
   renderList(_allRecords);
 });
 
 // Clear dates
 document.getElementById('btn-clear-dates').addEventListener('click', function() {
   _dateFrom = ''; _dateTo = '';
+  _currentPage = 1;
   document.getElementById('date-from').value = '';
   document.getElementById('date-to').value   = '';
   renderList(_allRecords);

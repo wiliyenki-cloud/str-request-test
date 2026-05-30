@@ -68,3 +68,23 @@ body { margin: 0; background: #f5f5f5; font-family: -apple-system, BlinkMacSyste
 .badge-reject       { background: #ffebee; color: #c62828; }
 .card-row { display: flex; gap: 8px; margin-bottom: 4px; font-size: 13px; }
 .lbl { color: #888; min-width: 100px; flex-shrink: 0; }
+
+/* ── Master Detail table ──────────────────────────────────────── */
+.tbl-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px 6px; }
+.tbl-info { font-size: 12px; color: #888; }
+.btn-export { background: #1a6fe8; color: #fff; border: none; border-radius: 6px; padding: 7px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.btn-export:active { opacity: .8; }
+.tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 8px 8px; }
+.str-table { border-collapse: collapse; font-size: 11px; min-width: 680px; width: 100%; }
+.str-table th { background: #f5f5f5; color: #555; font-weight: 600; padding: 7px 8px; text-align: left; border-bottom: 2px solid #e0e0e0; white-space: nowrap; position: sticky; top: 0; }
+.str-table td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; word-break: break-word; font-size: 11px; }
+.str-table tr:hover td { background: #fafafa; }
+.str-table .num { text-align: right; }
+
+/* ── Pagination ───────────────────────────────────────────────── */
+.pagination { display: flex; justify-content: center; align-items: center; gap: 4px; padding: 10px 8px 16px; flex-wrap: wrap; }
+.pg-btn { background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; min-width: 32px; line-height: 1.4; }
+.pg-btn:disabled { opacity: .35; cursor: default; }
+.pg-btn.pg-active { background: #111; color: #fff; border-color: #111; font-weight: 700; }
+.pg-btn:not(:disabled):not(.pg-active):active { background: #f0f0f0; }
+.pg-ell { color: #aaa; font-size: 12px; padding: 0 3px; line-height: 2; }
