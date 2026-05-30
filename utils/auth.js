@@ -57,18 +57,9 @@ function getUserInfo() {
       return;
     }
 
-    // 2. Only call requestAuthCode from home page (registered redirect URL)
-    var isHome = location.pathname.indexOf('/home/index.html') !== -1;
-    if (!isHome) {
-      if (typeof dbg === 'function') dbg('auth: non-home page + no cache → anonymous (open app from home)');
-      var anon2 = { openId: '', nickName: 'User' };
-      _saveCache(anon2);
-      resolve(anon2);
-      return;
-    }
-
-    // 3. Home page: try requestAuthCode
-    if (typeof dbg === 'function') dbg('auth: home page, trying requestAuthCode...');
+    // 2. Try requestAuthCode from any page
+    // (Lark allows it once any URL is registered in redirect URLs)
+    if (typeof dbg === 'function') dbg('auth: trying requestAuthCode from ' + location.pathname.split('/').pop() + '...');
     tt.requestAuthCode({
       appId: CONFIG.APP_ID,
       success: function(res) {
