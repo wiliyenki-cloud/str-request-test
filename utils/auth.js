@@ -1,44 +1,70 @@
-// getUserInfo — requestAuthCode as primary method with sessionStorage caching.
+// getUserInfo — requestAuthCode HANYA dipanggil dari home page (URL terdaftar di Dev Console).
+// Halaman lain baca dari localStorage cache. Cache TTL = 30 menit.
 //
-// IMPORTANT: requestAuthCode is only called from pages whose URL is registered
-// in Developer Console → Security Settings → Redirect URLs.
-// Only HOME page URL is registered. Other pages read from sessionStorage cache.
-//
-// Flow:
-//   Home (registered URL) → requestAuthCode → GAS exchange → cache → redirect to str-list
-//   Other pages → read from sessionStorage cache (no requestAuthCode)
+// Redirect URL yang perlu didaftarkan di Developer Console:
+//   https://wiliyenki-sudo.github.io/str-request/lark-mini-app/pages/home/index.html
 
-var _userInfoMem = null; // in-memory cache (per page load)
+var _userInfoMem = null;
+var _CACHE_KEY   = '_larkUser';
+var _CACHE_TTL   = 30 * 60 * 1000; // 30 menit
+
+function _saveCache(user) {
+  _userInfoMem = user;
+  try {
+    localStorage.setItem(_CACHE_KEY, JSON.stringify({
+      openId:   user.openId,
+      nickName: user.nickName,
+      ts:       Date.now()
+    }));
+  } catch(e) {}
+}
+
+function _readCache() {
+  if (_userInfoMem) return _userInfoMem;
+  try {
+    var raw = localStorage.getItem(_CACHE_KEY);
+    if (!raw) return null;
+    var c = JSON.parse(raw);
+    if (!c || !c.ts) return null;
+    if (Date.now() - c.ts > _CACHE_TTL) {
+      localStorage.removeItem(_CACHE_KEY);
+      return null;
+    }
+    return { openId: c.openId || '', nickName: c.nickName || 'User' };
+  } catch(e) { return null; }
+}
 
 function getUserInfo() {
   return new Promise(function(resolve) {
-    // 1. In-memory cache
-    if (_userInfoMem) {
-      if (typeof dbg === 'function') dbg('auth: mem cache openId=' + (_userInfoMem.openId || '(empty)'));
-      resolve(_userInfoMem);
+    // 1. Check localStorage cache
+    var cached = _readCache();
+    if (cached) {
+      _userInfoMem = cached;
+      if (typeof dbg === 'function') dbg('auth: cache hit openId=' + (cached.openId || '(empty)') + ' nick=' + cached.nickName);
+      resolve(cached);
       return;
     }
-
-    // 2. sessionStorage cache (persists across page navigations in same WebView)
-    try {
-      var stored = sessionStorage.getItem('_larkUser');
-      if (stored) {
-        _userInfoMem = JSON.parse(stored);
-        if (typeof dbg === 'function') dbg('auth: session cache openId=' + (_userInfoMem.openId || '(empty)') + ' nick=' + _userInfoMem.nickName);
-        resolve(_userInfoMem);
-        return;
-      }
-    } catch(e) {}
 
     if (typeof tt === 'undefined' || typeof tt.requestAuthCode !== 'function') {
       if (typeof dbg === 'function') dbg('auth: tt not available → anonymous');
-      resolve({ openId: '', nickName: 'User' });
+      var anon = { openId: '', nickName: 'User' };
+      _saveCache(anon);
+      resolve(anon);
       return;
     }
 
-    // 3. requestAuthCode (only works when current page URL is in registered Redirect URLs)
-    if (typeof dbg === 'function') dbg('auth: PAGE_URL = ' + location.href);
-    if (typeof dbg === 'function') dbg('auth: requestAuthCode from ' + location.pathname.split('/').pop() + '...');
+    // 2. Only call requestAuthCode from home page (registered redirect URL)
+    var isHome = location.pathname.indexOf('/home/index.html') !== -1;
+    if (!isHome) {
+      if (typeof dbg === 'function') dbg('auth: non-home page + no cache → anonymous (open app from home)');
+      var anon2 = { openId: '', nickName: 'User' };
+      _saveCache(anon2);
+      resolve(anon2);
+      return;
+    }
+
+    // 3. Home page: try requestAuthCode
+    if (typeof dbg === 'function') dbg('auth: home page, trying requestAuthCode...');
     tt.requestAuthCode({
       appId: CONFIG.APP_ID,
       success: function(res) {
@@ -47,26 +73,23 @@ function getUserInfo() {
           .then(function(data) {
             var user = { openId: data.openId || '', nickName: data.nickName || 'User' };
             if (typeof dbg === 'function') dbg('auth: GAS OK openId=' + (user.openId || '(empty)') + ' nick=' + user.nickName);
-            _userInfoMem = user;
-            try { sessionStorage.setItem('_larkUser', JSON.stringify(user)); } catch(e) {}
+            _saveCache(user);
             resolve(user);
           })
           .catch(function(e) {
             if (typeof dbg === 'function') dbg('auth: GAS FAIL ' + (e.message || String(e)));
-            if (typeof dbg === 'function') dbg('auth: → pastikan GAS sudah di-redeploy!');
-            var anon = { openId: '', nickName: 'User' };
-            _userInfoMem = anon;
-            resolve(anon);
+            if (typeof dbg === 'function') dbg('auth: → update GAS dulu!');
+            var anon3 = { openId: '', nickName: 'User' };
+            _saveCache(anon3);
+            resolve(anon3);
           });
       },
       fail: function(err) {
         var msg = (err && (err.errString || err.errMsg)) || JSON.stringify(err || {});
-        if (typeof dbg === 'function') dbg('auth: requestAuthCode FAIL ' + msg.slice(0, 120));
-        var anon = { openId: '', nickName: 'User' };
-        _userInfoMem = anon;
-        // Save anonymous to sessionStorage so other pages don't retry requestAuthCode
-        try { sessionStorage.setItem('_larkUser', JSON.stringify(anon)); } catch(e) {}
-        resolve(anon);
+        if (typeof dbg === 'function') dbg('auth: requestAuthCode FAIL ' + msg.slice(0, 150));
+        var anon4 = { openId: '', nickName: 'User' };
+        _saveCache(anon4);
+        resolve(anon4);
       }
     });
   });
@@ -77,8 +100,8 @@ function isICO(openId) {
   return !!openId && CONFIG.ICO_USER_IDS.indexOf(openId) !== -1;
 }
 
-// clearUserCache — call to force re-authentication
+// clearUserCache — force re-auth (call saat logout / switch user)
 function clearUserCache() {
   _userInfoMem = null;
-  try { sessionStorage.removeItem('_larkUser'); } catch(e) {}
+  try { localStorage.removeItem(_CACHE_KEY); } catch(e) {}
 }
