@@ -63,8 +63,15 @@ function renderList(records) {
 
 function loadList() {
   show('screen-loading');
+  if (typeof dbg === 'function') {
+    dbg('loadList() start');
+    dbg('CONFIG ok: ' + (typeof CONFIG !== 'undefined'));
+    dbg('GAS_URL: ...' + (typeof CONFIG !== 'undefined' ? CONFIG.GAS_URL.slice(-40) : 'N/A'));
+    dbg('larkSearch: ' + (typeof larkSearch === 'function'));
+  }
   larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, null)
     .then(function(records) {
+      if (typeof dbg === 'function') dbg('larkSearch OK — ' + records.length + ' records');
       _allRecords = records.map(function(r) {
         return {
           recordId:        r.record_id,
@@ -81,6 +88,7 @@ function loadList() {
       renderList(_allRecords);
     })
     .catch(function(err) {
+      if (typeof dbg === 'function') dbg('❌ larkSearch ERROR: ' + (err.message || String(err)));
       document.getElementById('err-text').textContent = 'Gagal memuat: ' + (err.message || String(err));
       show('screen-error');
     });
