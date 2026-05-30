@@ -20,7 +20,7 @@ var CONFIG = {
   STATUS_REJECT:         'Reject',
 
   // ICO user open_ids — admins maintain this list manually
-  ICO_USER_IDS: ['ou_2dde95ccc246f145e2a4c7b4b60802b3']
+  ICO_USER_IDS: ['ou_2dde95ccc246f145e2a4c7b4b60802b3'],
 
   // Lark App ID (dari Developer Console > Credentials & Basic Info)
   APP_ID: 'cli_aa9317810ab8ded4',
