@@ -1,5 +1,7 @@
-var _allRecords  = [];
+var _allRecords   = [];
 var _activeFilter = 'all';
+var _currentUser  = { openId: '', nickName: 'User' };
+var _mySites      = [];
 
 function statusBadgeClass(status) {
   if (status === CONFIG.STATUS_WAITING_MGR) return 'badge-waiting-mgr';
@@ -71,16 +73,22 @@ function renderList(records) {
   }).join('');
   container.querySelectorAll('.card').forEach(function(card) {
     card.addEventListener('click', function() {
-      var s   = card.dataset.status;
-      var qs  = '?str=' + encodeURIComponent(card.dataset.str) + '&record=' + encodeURIComponent(card.dataset.record);
+      var s          = card.dataset.status;
+      var qs         = '?str=' + encodeURIComponent(card.dataset.str) + '&record=' + encodeURIComponent(card.dataset.record);
+      var userIsICO  = isICO(_currentUser.openId);
+      var userIsMgr  = !userIsICO && !!_currentUser.openId && _mySites.length > 0;
       var dest;
-      if (s === CONFIG.STATUS_WAITING_MGR) {
+      if (s === CONFIG.STATUS_WAITING_MGR && userIsMgr) {
+        // Hanya manager yg bisa approve
         dest = '../approval-detail/index.html' + qs;
-      } else if (s === CONFIG.STATUS_WAITING_ICO) {
+      } else if (s === CONFIG.STATUS_WAITING_ICO && userIsICO) {
+        // Hanya ICO yg bisa process
         dest = '../ico-detail/index.html' + qs;
       } else {
+        // Semua lainnya: read-only
         dest = '../str-detail/index.html' + qs;
       }
+      if (typeof dbg === 'function') dbg('nav → ' + dest.split('/').slice(-2).join('/') + ' (role:' + (userIsICO ? 'ICO' : userIsMgr ? 'Mgr' : 'anon') + ' status:' + s + ')');
       window.location.href = dest;
     });
   });
@@ -141,6 +149,8 @@ function loadList() {
 
       if (typeof dbg === 'function') dbg('mySites: [' + mySites.join(',') + ']');
 
+      _currentUser = user;
+      _mySites     = mySites;
       var visibleRecords = applyFilter(strRecords, user, mySites);
       _allRecords = mapRecords(visibleRecords);
       renderList(_allRecords);

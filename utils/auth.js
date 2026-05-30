@@ -90,8 +90,17 @@ function getUserInfo() {
   });
 }
 
-// isICO — returns true if current user is in the ICO list
+// isICO — returns true if current user is in the ICO list.
+// Supports role override via sessionStorage._roleOverride for testing:
+//   'ico'     → always ICO regardless of openId
+//   'manager' → never ICO (force manager role)
+//   absent    → auto-detect from ICO_USER_IDS
 function isICO(openId) {
+  try {
+    var ov = sessionStorage.getItem('_roleOverride');
+    if (ov === 'ico')     return true;
+    if (ov === 'manager') return false;
+  } catch(e) {}
   return !!openId && CONFIG.ICO_USER_IDS.indexOf(openId) !== -1;
 }
 
