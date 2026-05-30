@@ -46,6 +46,7 @@
   // Auto-run checks when DOM is ready
   document.addEventListener('DOMContentLoaded', function() {
     dbg('=== PAGE: ' + location.pathname.split('/').pop() + ' ===');
+    dbg('FULL_URL: ' + location.href);
     dbg('CONFIG: '      + (typeof CONFIG      !== 'undefined' ? 'OK (GAS=' + CONFIG.GAS_URL.slice(-30) + ')' : '❌ UNDEFINED'));
     dbg('tt SDK: '      + (typeof tt          !== 'undefined' ? 'OK' : '❌ UNDEFINED'));
     dbg('getUserInfo: ' + (typeof getUserInfo  === 'function'  ? 'OK' : '❌ UNDEFINED'));
