@@ -1,4 +1,4 @@
-var _allRecords = [];
+var _allRecords  = [];
 var _activeFilter = 'all';
 
 function statusBadgeClass(status) {
@@ -36,6 +36,22 @@ function filterRecords(records, filter) {
   return records.filter(function(r) { return r.status === target; });
 }
 
+function mapRecords(records) {
+  return records.map(function(r) {
+    return {
+      recordId:        r.record_id,
+      strNumber:       fieldText(r.fields['STR Number']),
+      site:            fieldText(r.fields['Site']),
+      siteName:        fieldText(r.fields['Site Name']),
+      department:      fieldText(r.fields['Department']),
+      status:          fieldText(r.fields['Status']),
+      submitDate:      fmtDate(r.fields['Submit Date']),
+      planReceiveDate: fmtDate(r.fields['Plan Receive Date']),
+      prNumber:        fieldText(r.fields['PR Number'])
+    };
+  });
+}
+
 function renderList(records) {
   var filtered = filterRecords(records, _activeFilter);
   if (filtered.length === 0) { show('screen-empty'); return; }
@@ -61,37 +77,81 @@ function renderList(records) {
   show('screen-list');
 }
 
+function applyFilter(allSTR, user, mySites) {
+  // ICO sees all records
+  if (isICO(user.openId)) {
+    if (typeof dbg === 'function') dbg('role: ICO → show all ' + allSTR.length + ' records');
+    return allSTR;
+  }
+  // Manager with known openId → filter by site
+  if (user.openId && mySites.length > 0) {
+    var filtered = allSTR.filter(function(r) {
+      return mySites.indexOf(fieldText(r.fields['Site'])) !== -1;
+    });
+    if (typeof dbg === 'function') dbg('role: Manager sites=[' + mySites.join(',') + '] → ' + filtered.length + ' records');
+    return filtered;
+  }
+  // No openId or no sites mapped → show all
+  if (typeof dbg === 'function') dbg('role: anonymous/unmatched → show all ' + allSTR.length + ' records');
+  return allSTR;
+}
+
 function loadList() {
   show('screen-loading');
-  if (typeof dbg === 'function') {
-    dbg('loadList() start');
-    dbg('CONFIG ok: ' + (typeof CONFIG !== 'undefined'));
-    dbg('GAS_URL: ...' + (typeof CONFIG !== 'undefined' ? CONFIG.GAS_URL.slice(-40) : 'N/A'));
-    dbg('larkSearch: ' + (typeof larkSearch === 'function'));
-  }
-  larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, null)
-    .then(function(records) {
-      if (typeof dbg === 'function') dbg('larkSearch OK — ' + records.length + ' records');
-      _allRecords = records.map(function(r) {
-        return {
-          recordId:        r.record_id,
-          strNumber:       fieldText(r.fields['STR Number']),
-          site:            fieldText(r.fields['Site']),
-          siteName:        fieldText(r.fields['Site Name']),
-          department:      fieldText(r.fields['Department']),
-          status:          fieldText(r.fields['Status']),
-          submitDate:      fmtDate(r.fields['Submit Date']),
-          planReceiveDate: fmtDate(r.fields['Plan Receive Date']),
-          prNumber:        fieldText(r.fields['PR Number'])
-        };
-      });
+  if (typeof dbg === 'function') dbg('--- loadList start ---');
+
+  getUserInfo().then(function(user) {
+    if (typeof dbg === 'function') dbg('getUserInfo → openId=' + (user.openId || '(empty)') + ' nick=' + user.nickName);
+    if (typeof dbg === 'function') dbg('isICO=' + isICO(user.openId));
+
+    // Fetch STR records and MASTER SITE in parallel
+    var pSTR   = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, null);
+    var pSites = user.openId && !isICO(user.openId)
+      ? larkSearch(CONFIG.MASTER_BASE_APP_TOKEN, CONFIG.MASTER_SITE_TABLE_ID, null)
+      : Promise.resolve([]);
+
+    Promise.all([pSTR, pSites]).then(function(results) {
+      var strRecords  = results[0];
+      var siteRecords = results[1];
+
+      if (typeof dbg === 'function') dbg('STR records: ' + strRecords.length + ', site records: ' + siteRecords.length);
+
+      // Resolve manager's sites from MASTER SITE table
+      var mySites = siteRecords
+        .filter(function(r) {
+          var smUsers = r.fields[CONFIG.MASTER_SM_USER_FIELD];
+          if (!smUsers) return false;
+          var arr = Array.isArray(smUsers) ? smUsers : [smUsers];
+          return arr.some(function(u) {
+            return (u.id || u.open_id || u.openId) === user.openId;
+          });
+        })
+        .map(function(r) { return fieldText(r.fields[CONFIG.MASTER_SITE_FIELD]); })
+        .filter(Boolean);
+
+      if (typeof dbg === 'function') dbg('mySites: [' + mySites.join(',') + ']');
+
+      var visibleRecords = applyFilter(strRecords, user, mySites);
+      _allRecords = mapRecords(visibleRecords);
       renderList(_allRecords);
-    })
-    .catch(function(err) {
-      if (typeof dbg === 'function') dbg('❌ larkSearch ERROR: ' + (err.message || String(err)));
+    }).catch(function(err) {
+      if (typeof dbg === 'function') dbg('❌ fetch error: ' + (err.message || String(err)));
       document.getElementById('err-text').textContent = 'Gagal memuat: ' + (err.message || String(err));
       show('screen-error');
     });
+  }).catch(function(err) {
+    if (typeof dbg === 'function') dbg('❌ getUserInfo error: ' + (err.message || String(err)));
+    // Fallback: load all without filtering
+    larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, null)
+      .then(function(records) {
+        _allRecords = mapRecords(records);
+        renderList(_allRecords);
+      })
+      .catch(function(err2) {
+        document.getElementById('err-text').textContent = 'Gagal memuat: ' + (err2.message || String(err2));
+        show('screen-error');
+      });
+  });
 }
 
 // Filter tab clicks
@@ -105,9 +165,5 @@ document.getElementById('filter-tabs').querySelectorAll('.filter-tab').forEach(f
 });
 
 document.getElementById('btn-retry').addEventListener('click', loadList);
-
-document.addEventListener('visibilitychange', function() {
-  if (!document.hidden) loadList();
-});
-
+document.addEventListener('visibilitychange', function() { if (!document.hidden) loadList(); });
 loadList();
