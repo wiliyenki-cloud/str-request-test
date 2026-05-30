@@ -11,13 +11,30 @@
 </head>
 <body>
   <div class="page">
-    <!-- Filter tabs -->
+    <!-- Top bar: back to home -->
+    <div class="top-bar">
+      <button id="btn-back" class="btn-back">&#8592; Home</button>
+    </div>
+
+    <!-- Status tabs -->
     <div class="filter-tabs" id="filter-tabs">
       <div class="filter-tab active" data-filter="all">All</div>
       <div class="filter-tab" data-filter="waiting-mgr">Waiting Approval</div>
       <div class="filter-tab" data-filter="waiting-ico">Waiting Create</div>
       <div class="filter-tab" data-filter="done">Done</div>
       <div class="filter-tab" data-filter="reject">Reject</div>
+    </div>
+
+    <!-- Search + date range filter -->
+    <div class="filter-bar">
+      <input type="text" id="search-input" class="search-input"
+             placeholder="&#128269; STR Number / Requester...">
+      <div class="date-row">
+        <input type="date" id="date-from" class="date-input" title="Submit Date dari">
+        <span class="date-sep">–</span>
+        <input type="date" id="date-to" class="date-input" title="Submit Date sampai">
+        <button id="btn-clear-dates" class="btn-clear-dates" title="Reset tanggal">&#x2715;</button>
+      </div>
     </div>
 
     <div id="screen-loading" class="center-msg"><p>Memuat data...</p></div>
@@ -35,6 +52,6 @@
   <script src="../../utils/auth.js?v=14"></script>
   <script src="../../utils/api.js?v=5"></script>
   <script src="../../utils/debug.js?v=3"></script>
-  <script src="index.js?v=6"></script>
+  <script src="index.js?v=7"></script>
 </body>
 </html>

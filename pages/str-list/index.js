@@ -2,6 +2,9 @@ var _allRecords   = [];
 var _activeFilter = 'all';
 var _currentUser  = { openId: '', nickName: 'User' };
 var _mySites      = [];
+var _searchText   = '';
+var _dateFrom     = '';   // 'YYYY-MM-DD'
+var _dateTo       = '';   // 'YYYY-MM-DD'
 
 function statusBadgeClass(status) {
   if (status === CONFIG.STATUS_WAITING_MGR) return 'badge-waiting-mgr';
@@ -26,16 +29,54 @@ function fmtDate(ms) {
   return new Date(ms).toLocaleDateString('id-ID');
 }
 
+// ── Parse date string YYYY-MM-DD to start/end of day (local time) ────────────
+function dayStartMs(dateStr) {
+  if (!dateStr) return 0;
+  var p = dateStr.split('-');
+  return new Date(+p[0], +p[1] - 1, +p[2], 0, 0, 0, 0).getTime();
+}
+function dayEndMs(dateStr) {
+  if (!dateStr) return Infinity;
+  var p = dateStr.split('-');
+  return new Date(+p[0], +p[1] - 1, +p[2], 23, 59, 59, 999).getTime();
+}
+
+// ── Filter: status tab + text search + date range ────────────────────────────
 function filterRecords(records, filter) {
-  if (filter === 'all') return records;
-  var map = {
-    'waiting-mgr': CONFIG.STATUS_WAITING_MGR,
-    'waiting-ico': CONFIG.STATUS_WAITING_ICO,
-    'done':        CONFIG.STATUS_DONE,
-    'reject':      CONFIG.STATUS_REJECT
-  };
-  var target = map[filter];
-  return records.filter(function(r) { return r.status === target; });
+  var result = records;
+
+  // Status tab
+  if (filter !== 'all') {
+    var map = {
+      'waiting-mgr': CONFIG.STATUS_WAITING_MGR,
+      'waiting-ico': CONFIG.STATUS_WAITING_ICO,
+      'done':        CONFIG.STATUS_DONE,
+      'reject':      CONFIG.STATUS_REJECT
+    };
+    var target = map[filter];
+    result = result.filter(function(r) { return r.status === target; });
+  }
+
+  // Text search — STR Number atau Requester (case-insensitive)
+  if (_searchText) {
+    var q = _searchText.toLowerCase();
+    result = result.filter(function(r) {
+      return r.strNumber.toLowerCase().indexOf(q) !== -1 ||
+             r.requestedBy.toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  // Date range — by Submit Date
+  if (_dateFrom) {
+    var from = dayStartMs(_dateFrom);
+    result = result.filter(function(r) { return r.submitDateRaw >= from; });
+  }
+  if (_dateTo) {
+    var to = dayEndMs(_dateTo);
+    result = result.filter(function(r) { return r.submitDateRaw <= to; });
+  }
+
+  return result;
 }
 
 function mapRecords(records) {
@@ -48,8 +89,10 @@ function mapRecords(records) {
       department:      fieldText(r.fields['Department']),
       status:          fieldText(r.fields['Status']),
       submitDate:      fmtDate(r.fields['Submit Date']),
+      submitDateRaw:   r.fields['Submit Date'] || 0,
       planReceiveDate: fmtDate(r.fields['Plan Receive Date']),
-      prNumber:        fieldText(r.fields['PR Number'])
+      prNumber:        fieldText(r.fields['PR Number']),
+      requestedBy:     fieldText(r.fields['Requested By'])
     };
   });
 }
@@ -79,13 +122,10 @@ function renderList(records) {
       var userIsMgr  = !userIsICO && !!_currentUser.openId && _mySites.length > 0;
       var dest;
       if (s === CONFIG.STATUS_WAITING_MGR && userIsMgr) {
-        // Hanya manager yg bisa approve
         dest = '../approval-detail/index.html' + qs;
       } else if (s === CONFIG.STATUS_WAITING_ICO && userIsICO) {
-        // Hanya ICO yg bisa process
         dest = '../ico-detail/index.html' + qs;
       } else {
-        // Semua lainnya: read-only
         dest = '../str-detail/index.html' + qs;
       }
       if (typeof dbg === 'function') dbg('nav → ' + dest.split('/').slice(-2).join('/') + ' (role:' + (userIsICO ? 'ICO' : userIsMgr ? 'Mgr' : 'anon') + ' status:' + s + ')');
@@ -96,12 +136,10 @@ function renderList(records) {
 }
 
 function applyFilter(allSTR, user, mySites) {
-  // ICO sees all records
   if (isICO(user.openId)) {
     if (typeof dbg === 'function') dbg('role: ICO → show all ' + allSTR.length + ' records');
     return allSTR;
   }
-  // Manager with known openId → filter by site
   if (user.openId && mySites.length > 0) {
     var filtered = allSTR.filter(function(r) {
       return mySites.indexOf(fieldText(r.fields['Site'])) !== -1;
@@ -109,7 +147,6 @@ function applyFilter(allSTR, user, mySites) {
     if (typeof dbg === 'function') dbg('role: Manager sites=[' + mySites.join(',') + '] → ' + filtered.length + ' records');
     return filtered;
   }
-  // No openId or no sites mapped → show all
   if (typeof dbg === 'function') dbg('role: anonymous/unmatched → show all ' + allSTR.length + ' records');
   return allSTR;
 }
@@ -122,7 +159,6 @@ function loadList() {
     if (typeof dbg === 'function') dbg('getUserInfo → openId=' + (user.openId || '(empty)') + ' nick=' + user.nickName);
     if (typeof dbg === 'function') dbg('isICO=' + isICO(user.openId));
 
-    // Fetch STR records and MASTER SITE in parallel
     var pSTR   = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, null);
     var pSites = user.openId && !isICO(user.openId)
       ? larkSearch(CONFIG.MASTER_BASE_APP_TOKEN, CONFIG.MASTER_SITE_TABLE_ID, null)
@@ -134,7 +170,6 @@ function loadList() {
 
       if (typeof dbg === 'function') dbg('STR records: ' + strRecords.length + ', site records: ' + siteRecords.length);
 
-      // Resolve manager's sites from MASTER SITE table
       var mySites = siteRecords
         .filter(function(r) {
           var smUsers = r.fields[CONFIG.MASTER_SM_USER_FIELD];
@@ -161,7 +196,6 @@ function loadList() {
     });
   }).catch(function(err) {
     if (typeof dbg === 'function') dbg('❌ getUserInfo error: ' + (err.message || String(err)));
-    // Fallback: load all without filtering
     larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, null)
       .then(function(records) {
         _allRecords = mapRecords(records);
@@ -174,7 +208,14 @@ function loadList() {
   });
 }
 
-// Filter tab clicks
+// ── Event listeners ───────────────────────────────────────────────────────────
+
+// Back → home
+document.getElementById('btn-back').addEventListener('click', function() {
+  window.location.href = '../home/index.html';
+});
+
+// Status tabs
 document.getElementById('filter-tabs').querySelectorAll('.filter-tab').forEach(function(tab) {
   tab.addEventListener('click', function() {
     document.querySelectorAll('.filter-tab').forEach(function(t) { t.classList.remove('active'); });
@@ -182,6 +223,37 @@ document.getElementById('filter-tabs').querySelectorAll('.filter-tab').forEach(f
     _activeFilter = tab.dataset.filter;
     renderList(_allRecords);
   });
+});
+
+// Text search (debounce 300ms)
+var _searchTimer = null;
+document.getElementById('search-input').addEventListener('input', function() {
+  clearTimeout(_searchTimer);
+  var val = this.value;
+  _searchTimer = setTimeout(function() {
+    _searchText = val.trim();
+    renderList(_allRecords);
+  }, 300);
+});
+
+// Date from
+document.getElementById('date-from').addEventListener('change', function() {
+  _dateFrom = this.value;
+  renderList(_allRecords);
+});
+
+// Date to
+document.getElementById('date-to').addEventListener('change', function() {
+  _dateTo = this.value;
+  renderList(_allRecords);
+});
+
+// Clear dates
+document.getElementById('btn-clear-dates').addEventListener('click', function() {
+  _dateFrom = ''; _dateTo = '';
+  document.getElementById('date-from').value = '';
+  document.getElementById('date-to').value   = '';
+  renderList(_allRecords);
 });
 
 document.getElementById('btn-retry').addEventListener('click', loadList);
