@@ -35,7 +35,7 @@ function renderHeader(h) {
   var rows = [
     ['STR Number',    '<span class="bold">' + escHtml(h.strNumber) + '</span>'],
     ['Status',        '<span class="badge ' + statusBadgeClass(h.status) + '">' + escHtml(h.status) + '</span>'],
-    ['Site',          escHtml(h.site) + (h.siteName ? ' — ' + escHtml(h.siteName) : '')],
+    ['Site',          escHtml(h.site) + (h.siteName ? ' ï¿½ ' + escHtml(h.siteName) : '')],
     ['Type STR',      escHtml(h.typeStr)],
     ['Supplying Site',escHtml(h.supplyingSite)],
     ['Department',    escHtml(h.department)],
@@ -121,3 +121,4 @@ function loadDetail() {
 }
 
 loadDetail();
+document.getElementById('btn-back').addEventListener('click', function() { window.history.back(); });
