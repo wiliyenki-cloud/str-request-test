@@ -24,3 +24,5 @@ td.num { text-align: right; font-weight: 600; }
 button:disabled { opacity: .5; cursor: not-allowed; }
 .btn-back { background: none; border: 1px solid #e0e0e0; border-radius: 6px; padding: 5px 12px; font-size: 13px; color: #555; cursor: pointer; }
 .btn-back:active { background: #f0f0f0; }
+.apv-qty-input { width: 68px; text-align: right; border: 1px solid #1a73e8; border-radius: 4px; padding: 4px 6px; font-size: 12px; font-weight: 600; color: #1a6fe8; background: #e8f0fe; outline: none; }
+.apv-qty-input:focus { background: #fff; border-color: #0d47a1; }

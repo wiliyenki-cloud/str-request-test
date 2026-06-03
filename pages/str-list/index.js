@@ -255,6 +255,7 @@ function loadDetails() {
           article:      fieldText(r.fields['Article']),
           description:  fieldText(r.fields['Description']),
           requestQty:   fieldText(r.fields['Request QTY']),
+          approvalQty:  r.fields['Approval Qty'] != null ? r.fields['Approval Qty'] : '',
           supplyingSite: hdr.supplyingSite || '',
           prNumber:     hdr.prNumber      || ''
         };
@@ -297,7 +298,7 @@ function filterDetails() {
 }
 
 function exportCSV(data) {
-  var cols = ['ID STR','SITE','DEPARTMENT','REQUEST DATE','ARTICLE','DESCRIPTION','REQUEST QTY','SUPPLYING SITE','NO PR'];
+  var cols = ['ID STR','SITE','DEPARTMENT','REQUEST DATE','ARTICLE','DESCRIPTION','REQUEST QTY','APPROVAL QTY','SUPPLYING SITE','NO PR'];
   var rows = [cols.join(',')];
   data.forEach(function(d) {
     rows.push([
@@ -308,6 +309,7 @@ function exportCSV(data) {
       '"' + String(d.article).replace(/"/g,'""')      + '"',
       '"' + String(d.description).replace(/"/g,'""')  + '"',
       String(d.requestQty),
+      String(d.approvalQty !== '' ? d.approvalQty : d.requestQty),
       '"' + String(d.supplyingSite).replace(/"/g,'""')+ '"',
       '"' + String(d.prNumber).replace(/"/g,'""')     + '"'
     ].join(','));
@@ -344,7 +346,7 @@ function renderMasterDetail() {
   var tbl = '<div class="tbl-wrap"><table class="str-table">' +
     '<thead><tr>' +
       '<th>ID STR</th><th>SITE</th><th>DEPT</th><th>REQ DATE</th>' +
-      '<th>ARTICLE</th><th>DESCRIPTION</th><th>REQ QTY</th>' +
+      '<th>ARTICLE</th><th>DESCRIPTION</th><th>REQ QTY</th><th>APV QTY</th>' +
       '<th>SUPPLYING SITE</th><th>NO PR</th>' +
     '</tr></thead><tbody>' +
     pageData.map(function(d) {
@@ -356,6 +358,7 @@ function renderMasterDetail() {
         '<td>' + escHtml(d.article)      + '</td>' +
         '<td>' + escHtml(d.description)  + '</td>' +
         '<td class="num">' + escHtml(String(d.requestQty)) + '</td>' +
+        '<td class="num" style="font-weight:700;color:#1a6fe8;">' + escHtml(String(d.approvalQty !== '' ? d.approvalQty : d.requestQty)) + '</td>' +
         '<td>' + escHtml(d.supplyingSite)+ '</td>' +
         '<td>' + (d.prNumber ? '<span class="pr-val">' + escHtml(d.prNumber) + '</span>' : '') + '</td>' +
       '</tr>';

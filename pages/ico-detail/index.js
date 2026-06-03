@@ -76,11 +76,14 @@ function renderHeader(h) {
 function renderItems(items) {
   _itemsCache = items;
   document.getElementById('items-title').textContent = 'Item List (' + items.length + ')';
-  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>Stock</th><th>Sales</th><th>Req Qty</th><th>Reason</th></tr></thead>';
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>Stock</th><th>Sales</th><th>Req Qty</th><th>Apv Qty</th><th>Reason</th></tr></thead>';
   var tbody = '<tbody>' + items.map(function(it) {
+    var apv = it.approvalQty !== '' ? it.approvalQty : it.requestQty;
     return '<tr><td>' + escHtml(it.seq) + '</td><td>' + escHtml(it.article) + '</td><td>' + escHtml(it.description) + '</td>' +
       '<td class="num">' + escHtml(it.stockQty) + '</td><td class="num">' + escHtml(it.salesQty) + '</td>' +
-      '<td class="num">' + escHtml(it.requestQty) + '</td><td>' + escHtml(it.reason) + '</td></tr>';
+      '<td class="num">' + escHtml(it.requestQty) + '</td>' +
+      '<td class="num" style="font-weight:700;color:#1a6fe8;">' + escHtml(String(apv)) + '</td>' +
+      '<td>' + escHtml(it.reason) + '</td></tr>';
   }).join('') + '</tbody>';
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
 }
@@ -90,7 +93,7 @@ function renderItems(items) {
 // If download silently fails during testing, use tt.saveFile() instead.
 function downloadCsv() {
   var BOM = '﻿';  // UTF-8 BOM for Excel compatibility
-  var header = 'No,Article,Description,Stock Qty,Sales Qty,Request Qty,Reason\n';
+  var header = 'No,Article,Description,Stock Qty,Sales Qty,Request Qty,Approval Qty,Reason\n';
   var rows = _itemsCache.map(function(it) {
     function csvCell(v) {
       var s = String(v == null ? '' : v);
@@ -99,7 +102,8 @@ function downloadCsv() {
       }
       return s;
     }
-    return [it.seq, it.article, it.description, it.stockQty, it.salesQty, it.requestQty, it.reason]
+    var apv = it.approvalQty !== '' ? it.approvalQty : it.requestQty;
+    return [it.seq, it.article, it.description, it.stockQty, it.salesQty, it.requestQty, apv, it.reason]
       .map(csvCell).join(',');
   }).join('\n');
   var csvContent = BOM + header + rows;
@@ -150,6 +154,7 @@ function loadDetail() {
           stockQty:    r.fields['Stock Qty']     != null ? r.fields['Stock Qty'] : '',
           salesQty:    r.fields['Sales Qty']     != null ? r.fields['Sales Qty'] : '',
           requestQty:  r.fields['Request Qty']   != null ? r.fields['Request Qty'] : '',
+          approvalQty: r.fields['Approval Qty']  != null ? r.fields['Approval Qty'] : '',
           reason:      fieldText(r.fields['Reason'])
         };
       }));

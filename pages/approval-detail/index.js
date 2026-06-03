@@ -1,6 +1,7 @@
 var _recordId  = '';
 var _strNumber = '';
 var _acting    = false;
+var _detailItems = [];
 
 function getParams() {
   var qs = location.search.substring(1);
@@ -61,12 +62,19 @@ function renderHeader(h) {
 }
 
 function renderItems(items) {
+  _detailItems = items;
   document.getElementById('items-title').textContent = 'Item List (' + items.length + ')';
-  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>Stock</th><th>Sales</th><th>Req Qty</th><th>Reason</th></tr></thead>';
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>Stock</th><th>Sales</th><th>Req Qty</th><th>Apv Qty</th><th>Reason</th></tr></thead>';
   var tbody = '<tbody>' + items.map(function(it) {
-    return '<tr><td>' + escHtml(it.seq) + '</td><td>' + escHtml(it.article) + '</td><td>' + escHtml(it.description) + '</td>' +
-      '<td class="num">' + escHtml(it.stockQty) + '</td><td class="num">' + escHtml(it.salesQty) + '</td>' +
-      '<td class="num">' + escHtml(it.requestQty) + '</td><td>' + escHtml(it.reason) + '</td></tr>';
+    return '<tr data-rid="' + escHtml(it.recordId) + '">' +
+      '<td>' + escHtml(it.seq) + '</td>' +
+      '<td>' + escHtml(it.article) + '</td>' +
+      '<td>' + escHtml(it.description) + '</td>' +
+      '<td class="num">' + escHtml(it.stockQty) + '</td>' +
+      '<td class="num">' + escHtml(it.salesQty) + '</td>' +
+      '<td class="num">' + escHtml(it.requestQty) + '</td>' +
+      '<td class="num"><input type="number" class="apv-qty-input" min="0" value="' + escHtml(String(it.requestQty !== '' ? it.requestQty : 0)) + '"></td>' +
+      '<td>' + escHtml(it.reason) + '</td></tr>';
   }).join('') + '</tbody>';
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
 }
@@ -101,6 +109,7 @@ function loadDetail() {
 
       renderItems(detailRecords.map(function(r) {
         return {
+          recordId:    r.record_id,
           seq:         fieldText(r.fields['Row Sequence']),
           article:     fieldText(r.fields['Article']),
           description: fieldText(r.fields['Description']),
@@ -120,11 +129,25 @@ function loadDetail() {
   });
 }
 
-// Approve: Status → 'Waiting Create by ICO'
+// Approve: simpan Approval Qty tiap item → Status 'Waiting Create by ICO'
 document.getElementById('btn-approve').addEventListener('click', function() {
   if (_acting) return;
   setActing(true);
-  getUserInfo().then(function(user) {
+  // Save Approval Qty per detail record (sequential to avoid JSONP conflicts)
+  var rows = Array.prototype.slice.call(
+    document.querySelectorAll('#items-table tbody tr[data-rid]')
+  );
+  var chain = rows.reduce(function(p, row) {
+    return p.then(function() {
+      var qty = parseFloat(row.querySelector('.apv-qty-input').value) || 0;
+      return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_DETAIL_TABLE_ID, row.dataset.rid, {
+        'Approval Qty': qty
+      });
+    });
+  }, Promise.resolve());
+  chain.then(function() {
+    return getUserInfo();
+  }).then(function(user) {
     return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, _recordId, {
       'Status':        CONFIG.STATUS_WAITING_ICO,
       'Approved By':   user.nickName || 'Manager',
