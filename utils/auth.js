@@ -90,17 +90,21 @@ function getUserInfo() {
   });
 }
 
-// isICO — returns true if current user is in the ICO list.
+// isICO — returns true if current user is an ICO for any site.
 // Supports role override via sessionStorage._roleOverride for testing:
 //   'ico'     → always ICO regardless of openId
 //   'manager' → never ICO (force manager role)
-//   absent    → auto-detect from ICO_USER_IDS
-function isICO(openId) {
+//   absent    → auto-detect from icoMap (Master Mapping ICO table)
+//
+// icoMap (optional): { openId: [siteCode, ...] } built from Master Mapping ICO.
+// If not provided, falls back to hardcoded ICO_USER_IDS (backward compat).
+function isICO(openId, icoMap) {
   try {
     var ov = sessionStorage.getItem('_roleOverride');
     if (ov === 'ico')     return true;
     if (ov === 'manager') return false;
   } catch(e) {}
+  if (icoMap) return !!(icoMap[openId] && icoMap[openId].length > 0);
   return !!openId && CONFIG.ICO_USER_IDS.indexOf(openId) !== -1;
 }
 

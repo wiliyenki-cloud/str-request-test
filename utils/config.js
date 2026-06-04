@@ -12,6 +12,7 @@ var CONFIG = {
   STR_DETAIL_TABLE_ID:   'tbluAki3HiMe1ppg',
   STR_TYPE_TABLE_ID:     'tblfBWxKU8Fh7EMJ',
   DEPT_TABLE_ID:         'tblH112oh1QPLPiZ',
+  MASTER_ICO_TABLE_ID:   'tbl53FFpAodzb70G',
 
   // Status values (exact strings used in Lark Base)
   STATUS_WAITING_MGR:    'Waiting Approval by Mgr',

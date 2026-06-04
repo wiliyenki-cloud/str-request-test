@@ -21,6 +21,7 @@ var _detailsLoaded = false;
 var _currentPage   = 1;
 var _pageSize      = 10;
 var _headerMap     = {};   // strNumber → mapped header record
+var _icoMap        = {};   // openId → [siteCode, ...]
 
 function statusBadgeClass(status) {
   if (status === CONFIG.STATUS_WAITING_MGR) return 'badge-waiting-mgr';
@@ -140,7 +141,7 @@ function renderList(records) {
     card.addEventListener('click', function() {
       var s          = card.dataset.status;
       var qs         = '?str=' + encodeURIComponent(card.dataset.str) + '&record=' + encodeURIComponent(card.dataset.record);
-      var userIsICO  = isICO(_currentUser.openId);
+      var userIsICO  = isICO(_currentUser.openId, _icoMap);
       var userIsMgr  = !userIsICO && !!_currentUser.openId && _mySites.length > 0;
       var dest;
       if (s === CONFIG.STATUS_WAITING_MGR && userIsMgr) {
@@ -157,10 +158,36 @@ function renderList(records) {
   show('screen-list');
 }
 
-function applyFilter(allSTR, user, mySites) {
-  if (isICO(user.openId)) {
-    if (typeof dbg === 'function') dbg('role: ICO → show all ' + allSTR.length + ' records');
-    return allSTR;
+// Helper: build icoMap from Master Mapping ICO records
+function buildIcoMap(icoRecords) {
+  var map = {};
+  icoRecords.forEach(function(r) {
+    var site     = fieldText(r.fields['Site']);
+    var icoUsers = r.fields['ICO'];
+    if (!site || !icoUsers) return;
+    (Array.isArray(icoUsers) ? icoUsers : [icoUsers]).forEach(function(u) {
+      var oid = u.id || u.open_id || u.openId || '';
+      if (!oid) return;
+      if (!map[oid]) map[oid] = [];
+      if (map[oid].indexOf(site) === -1) map[oid].push(site);
+    });
+  });
+  return map;
+}
+
+function applyFilter(allSTR, user, mySites, icoMap) {
+  if (isICO(user.openId, icoMap)) {
+    // Debug override 'ico' → see all (no site restriction)
+    try { if (sessionStorage.getItem('_roleOverride') === 'ico') {
+      if (typeof dbg === 'function') dbg('role: ICO (override) → show all ' + allSTR.length + ' records');
+      return allSTR;
+    }} catch(e) {}
+    var icoSites = (icoMap[user.openId] || []);
+    var filtered = allSTR.filter(function(r) {
+      return icoSites.indexOf(fieldText(r.fields['Site'])) !== -1;
+    });
+    if (typeof dbg === 'function') dbg('role: ICO sites=[' + icoSites.join(',') + '] → ' + filtered.length + ' records');
+    return filtered;
   }
   if (user.openId && mySites.length > 0) {
     var filtered = allSTR.filter(function(r) {
@@ -179,20 +206,26 @@ function loadList() {
 
   getUserInfo().then(function(user) {
     if (typeof dbg === 'function') dbg('getUserInfo → openId=' + (user.openId || '(empty)') + ' nick=' + user.nickName);
-    if (typeof dbg === 'function') dbg('isICO=' + isICO(user.openId));
 
     var pSTR   = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, null);
-    var pSites = user.openId && !isICO(user.openId)
+    var pICO   = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.MASTER_ICO_TABLE_ID, null);
+    var pSites = user.openId
       ? larkSearch(CONFIG.MASTER_BASE_APP_TOKEN, CONFIG.MASTER_SITE_TABLE_ID, null)
       : Promise.resolve([]);
 
-    Promise.all([pSTR, pSites]).then(function(results) {
+    Promise.all([pSTR, pSites, pICO]).then(function(results) {
       var strRecords  = results[0];
       var siteRecords = results[1];
+      var icoRecords  = results[2];
 
-      if (typeof dbg === 'function') dbg('STR records: ' + strRecords.length + ', site records: ' + siteRecords.length);
+      if (typeof dbg === 'function') dbg('STR records: ' + strRecords.length + ', site records: ' + siteRecords.length + ', ico records: ' + icoRecords.length);
 
-      var mySites = siteRecords
+      // Build ICO map from Master Mapping ICO table
+      _icoMap = buildIcoMap(icoRecords);
+      if (typeof dbg === 'function') dbg('isICO=' + isICO(user.openId, _icoMap) + ' icoSites=[' + ((_icoMap[user.openId] || []).join(',')) + ']');
+
+      // Manager sites (only relevant if not ICO)
+      var mySites = !isICO(user.openId, _icoMap) ? siteRecords
         .filter(function(r) {
           var smUsers = r.fields[CONFIG.MASTER_SM_USER_FIELD];
           if (!smUsers) return false;
@@ -202,13 +235,13 @@ function loadList() {
           });
         })
         .map(function(r) { return fieldText(r.fields[CONFIG.MASTER_SITE_FIELD]); })
-        .filter(Boolean);
+        .filter(Boolean) : [];
 
       if (typeof dbg === 'function') dbg('mySites: [' + mySites.join(',') + ']');
 
       _currentUser = user;
       _mySites     = mySites;
-      var visibleRecords = applyFilter(strRecords, user, mySites);
+      var visibleRecords = applyFilter(strRecords, user, mySites, _icoMap);
       _allRecords = mapRecords(visibleRecords);
       // Build lookup map for Master Detail join; reset detail cache
       _headerMap     = {};

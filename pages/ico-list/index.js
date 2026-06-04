@@ -29,26 +29,66 @@ function renderList(list) {
   });
 }
 
+function buildIcoMap(icoRecords) {
+  var map = {};
+  icoRecords.forEach(function(r) {
+    var site     = fieldText(r.fields['Site']);
+    var icoUsers = r.fields['ICO'];
+    if (!site || !icoUsers) return;
+    (Array.isArray(icoUsers) ? icoUsers : [icoUsers]).forEach(function(u) {
+      var oid = u.id || u.open_id || u.openId || '';
+      if (!oid) return;
+      if (!map[oid]) map[oid] = [];
+      if (map[oid].indexOf(site) === -1) map[oid].push(site);
+    });
+  });
+  return map;
+}
+
 function loadList() {
   show('screen-loading');
-  larkSearch(
-    CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
-    { conjunction: 'and', conditions: [{ field_name: 'Status', operator: 'is', value: [CONFIG.STATUS_WAITING_ICO] }] }
-  ).then(function(records) {
-    var list = records.map(function(r) {
-      return {
-        recordId:       r.record_id,
-        strNumber:      fieldText(r.fields['STR Number']),
-        site:           fieldText(r.fields['Site']),
-        siteName:       fieldText(r.fields['Site Name']),
-        department:     fieldText(r.fields['Department']),
-        submitDate:     fmtDate(r.fields['Submit Date']),
-        planReceiveDate: fmtDate(r.fields['Plan Receive Date'])
-      };
+  getUserInfo().then(function(user) {
+    Promise.all([
+      larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.MASTER_ICO_TABLE_ID, null),
+      larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
+        { conjunction: 'and', conditions: [{ field_name: 'Status', operator: 'is', value: [CONFIG.STATUS_WAITING_ICO] }] })
+    ]).then(function(results) {
+      var icoMap   = buildIcoMap(results[0]);
+      var icoSites = isICO(user.openId, icoMap) ? (icoMap[user.openId] || []) : [];
+
+      var list = results[1].map(function(r) {
+        return {
+          recordId:        r.record_id,
+          strNumber:       fieldText(r.fields['STR Number']),
+          site:            fieldText(r.fields['Site']),
+          siteName:        fieldText(r.fields['Site Name']),
+          department:      fieldText(r.fields['Department']),
+          submitDate:      fmtDate(r.fields['Submit Date']),
+          planReceiveDate: fmtDate(r.fields['Plan Receive Date'])
+        };
+      });
+
+      // Filter by ICO's assigned sites (override 'ico' skips filter)
+      var filtered;
+      try {
+        filtered = sessionStorage.getItem('_roleOverride') === 'ico'
+          ? list
+          : icoSites.length > 0
+            ? list.filter(function(item) { return icoSites.indexOf(item.site) !== -1; })
+            : [];
+      } catch(e) {
+        filtered = icoSites.length > 0
+          ? list.filter(function(item) { return icoSites.indexOf(item.site) !== -1; })
+          : [];
+      }
+
+      if (filtered.length === 0) { show('screen-empty'); return; }
+      renderList(filtered);
+      show('screen-list');
+    }).catch(function(err) {
+      document.getElementById('err-text').textContent = 'Gagal memuat: ' + (err.message || String(err));
+      show('screen-error');
     });
-    if (list.length === 0) { show('screen-empty'); return; }
-    renderList(list);
-    show('screen-list');
   }).catch(function(err) {
     document.getElementById('err-text').textContent = 'Gagal memuat: ' + (err.message || String(err));
     show('screen-error');
