@@ -7,7 +7,7 @@ var CONFIG = {
   MASTER_SM_USER_FIELD:   'STORE',       // array of {id, open_id} — Store Manager users
 
   // STR Management Base
-  STR_BASE_APP_TOKEN:    'NU3RwtirZipu3sk9nD8l7axOgHc',
+  STR_BASE_APP_TOKEN:    'Z0BrbJIloaJtSxsOTY4lOsQagEb',
   STR_HEADER_TABLE_ID:   'tblQ7qPdqgZ6QcOg',
   STR_DETAIL_TABLE_ID:   'tbluAki3HiMe1ppg',
   STR_TYPE_TABLE_ID:     'tblfBWxKU8Fh7EMJ',
