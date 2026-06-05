@@ -19,7 +19,7 @@ function show(id) {
 }
 
 function showFooter(which) {
-  ['footer-state1','footer-confirm-done','footer-state2','footer-confirm-posted','footer-reject'].forEach(function(id) {
+  ['footer-state1','footer-state2'].forEach(function(id) {
     document.getElementById(id).style.display = (id === which) ? '' : 'none';
   });
 }
@@ -39,11 +39,48 @@ function showToast(msg, color) {
 function setActing(val) {
   _acting = val;
   ['btn-process-done','btn-mark-posted','btn-start-reject1','btn-start-reject2',
-   'btn-confirm-done','btn-confirm-posted','btn-confirm-reject','btn-csv'].forEach(function(id) {
+   'btn-csv','modal-ok','modal-cancel'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.disabled = val;
   });
 }
+
+// ── Confirmation modal (generic) ───────────────────────────────────────────────
+var _confirmCb = null;
+function openConfirm(opts) {
+  document.getElementById('modal-msg').textContent = opts.message || 'Apakah anda yakin lanjutkan proses?';
+  var wrap = document.getElementById('modal-reason-wrap');
+  wrap.style.display = opts.showReason ? '' : 'none';
+  var okBtn = document.getElementById('modal-ok');
+  okBtn.textContent = opts.okLabel || 'Ya, Lanjutkan';
+  okBtn.className   = opts.danger ? 'modal-ok modal-ok-danger' : 'modal-ok';
+  if (opts.showReason) document.getElementById('modal-reject-reason').value = '';
+  _confirmCb = opts.onConfirm || null;
+  document.getElementById('confirm-modal').style.display = 'flex';
+  if (opts.showReason) setTimeout(function() { document.getElementById('modal-reject-reason').focus(); }, 0);
+}
+function closeConfirm() {
+  document.getElementById('confirm-modal').style.display = 'none';
+  _confirmCb = null;
+}
+document.getElementById('modal-cancel').addEventListener('click', function() { if (!_acting) closeConfirm(); });
+document.getElementById('confirm-modal').addEventListener('click', function(e) {
+  if (e.target === this && !_acting) closeConfirm();
+});
+document.getElementById('modal-ok').addEventListener('click', function() {
+  if (_acting) return;
+  var cb = _confirmCb;
+  if (!cb) { closeConfirm(); return; }
+  if (document.getElementById('modal-reason-wrap').style.display !== 'none') {
+    var reason = document.getElementById('modal-reject-reason').value.trim();
+    if (!reason) { document.getElementById('modal-reject-reason').focus(); return; }
+    closeConfirm();
+    cb(reason);
+  } else {
+    closeConfirm();
+    cb();
+  }
+});
 
 function renderHeader(h) {
   var rows = [
@@ -205,18 +242,16 @@ function loadDetail() {
 
 // ── State 1: Process Done ──────────────────────────────────────────────────────
 document.getElementById('btn-process-done').addEventListener('click', function() {
+  if (_acting) return;
   var reservasi = document.getElementById('reservasi-input').value.trim();
   if (!reservasi) { showToast('Nomor Reservasi wajib diisi', '#c62828'); return; }
-  showFooter('footer-confirm-done');
-  document.getElementById('btn-confirm-done').disabled = false;
+  openConfirm({
+    message:   'Pastikan Nomor Reservasi & Article Doc sudah benar. Apakah anda yakin lanjutkan proses?',
+    onConfirm: doProcessDone
+  });
 });
 
-document.getElementById('btn-cancel-done').addEventListener('click', function() {
-  showFooter('footer-state1');
-});
-
-document.getElementById('btn-confirm-done').addEventListener('click', function() {
-  if (_acting) return;
+function doProcessDone() {
   var reservasi = document.getElementById('reservasi-input').value.trim();
   setActing(true);
   var rows  = Array.prototype.slice.call(document.querySelectorAll('#items-table tbody tr[data-rid]'));
@@ -242,27 +277,21 @@ document.getElementById('btn-confirm-done').addEventListener('click', function()
     showToast('Gagal: ' + (err.message || String(err)), '#c62828');
     setActing(false);
   });
-});
+}
 
 // ── State 2: Mark as Posted ────────────────────────────────────────────────────
 document.getElementById('btn-mark-posted').addEventListener('click', function() {
-  document.getElementById('section-approvedby').style.display = '';
-  showFooter('footer-confirm-posted');
-  document.getElementById('btn-confirm-posted').disabled = !document.getElementById('approvedby-input').value.trim();
-});
-
-document.getElementById('approvedby-input').addEventListener('input', function() {
-  document.getElementById('btn-confirm-posted').disabled = !this.value.trim();
-});
-
-document.getElementById('btn-cancel-posted').addEventListener('click', function() {
-  showFooter('footer-state2');
-});
-
-document.getElementById('btn-confirm-posted').addEventListener('click', function() {
   if (_acting) return;
   var approvedBy = document.getElementById('approvedby-input').value.trim();
-  if (!approvedBy) return;
+  if (!approvedBy) { showToast('Approved By wajib diisi', '#c62828'); return; }
+  openConfirm({
+    message:   'Pastikan ADJ sudah diposting di SAP. Apakah anda yakin lanjutkan proses?',
+    onConfirm: doMarkPosted
+  });
+});
+
+function doMarkPosted() {
+  var approvedBy = document.getElementById('approvedby-input').value.trim();
   setActing(true);
   larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, _recordId, {
     'Status':      CONFIG.STATUS_ADJ_DONE,
@@ -275,32 +304,24 @@ document.getElementById('btn-confirm-posted').addEventListener('click', function
     showToast('Gagal: ' + (err.message || String(err)), '#c62828');
     setActing(false);
   });
-});
+}
 
 // ── Reject (both states) ───────────────────────────────────────────────────────
 ['btn-start-reject1','btn-start-reject2'].forEach(function(btnId) {
   var el = document.getElementById(btnId);
   if (el) el.addEventListener('click', function() {
-    document.getElementById('section-reject').style.display = '';
-    showFooter('footer-reject');
-    document.getElementById('reject-reason').focus();
+    if (_acting) return;
+    openConfirm({
+      message:    'Apakah anda yakin reject pengajuan ini? Tuliskan alasannya:',
+      showReason: true,
+      okLabel:    'Ya, Reject',
+      danger:     true,
+      onConfirm:  doReject
+    });
   });
 });
 
-document.getElementById('btn-cancel-reject').addEventListener('click', function() {
-  document.getElementById('section-reject').style.display = 'none';
-  document.getElementById('reject-reason').value = '';
-  document.getElementById('btn-confirm-reject').disabled = true;
-  showFooter(_currentStatus === CONFIG.STATUS_ADJ_WAITING_ICO ? 'footer-state1' : 'footer-state2');
-});
-
-document.getElementById('reject-reason').addEventListener('input', function() {
-  document.getElementById('btn-confirm-reject').disabled = !this.value.trim();
-});
-
-document.getElementById('btn-confirm-reject').addEventListener('click', function() {
-  var reason = document.getElementById('reject-reason').value.trim();
-  if (_acting || !reason) return;
+function doReject(reason) {
   setActing(true);
   larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, _recordId, {
     'Status':        CONFIG.STATUS_ADJ_REJECT,
@@ -313,7 +334,7 @@ document.getElementById('btn-confirm-reject').addEventListener('click', function
     showToast('Gagal: ' + (err.message || String(err)), '#c62828');
     setActing(false);
   });
-});
+}
 
 // ── CSV ────────────────────────────────────────────────────────────────────────
 document.getElementById('btn-csv').addEventListener('click', function() {

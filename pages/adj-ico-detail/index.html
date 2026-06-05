@@ -42,12 +42,6 @@
         <input type="text" id="approvedby-input" class="text-input"
                placeholder="Nama dan NIP Manager yang posting di SAP...">
       </div>
-      <!-- Reject reason -->
-      <div class="section" id="section-reject" style="display:none">
-        <div class="section-title">Alasan Reject *</div>
-        <textarea id="reject-reason" class="reject-input"
-                  placeholder="Tuliskan alasan reject..."></textarea>
-      </div>
     </div>
     <div id="toast" class="toast" style="display:none"></div>
 
@@ -57,25 +51,25 @@
       <button class="btn-reject" id="btn-start-reject1">Reject</button>
       <button class="btn-done"   id="btn-process-done">Process Done</button>
     </div>
-    <!-- State 1 confirm done -->
-    <div class="footer" id="footer-confirm-done" style="display:none">
-      <button class="btn-cancel"       id="btn-cancel-done">Batal</button>
-      <button class="btn-confirm-done" id="btn-confirm-done" disabled>Konfirmasi Done</button>
-    </div>
     <!-- State 2 footer -->
     <div class="footer" id="footer-state2" style="display:none">
       <button class="btn-reject" id="btn-start-reject2">Reject</button>
       <button class="btn-done"   id="btn-mark-posted">Mark as Posted</button>
     </div>
-    <!-- State 2 confirm posted -->
-    <div class="footer" id="footer-confirm-posted" style="display:none">
-      <button class="btn-cancel"         id="btn-cancel-posted">Batal</button>
-      <button class="btn-confirm-posted" id="btn-confirm-posted" disabled>Konfirmasi Posted</button>
-    </div>
-    <!-- Reject confirm -->
-    <div class="footer" id="footer-reject" style="display:none">
-      <button class="btn-cancel"         id="btn-cancel-reject">Batal</button>
-      <button class="btn-confirm-reject" id="btn-confirm-reject" disabled>Konfirmasi Reject</button>
+
+    <!-- Confirmation modal -->
+    <div class="modal-overlay" id="confirm-modal" style="display:none">
+      <div class="modal-box">
+        <p class="modal-msg" id="modal-msg">Apakah anda yakin lanjutkan proses?</p>
+        <div class="modal-body" id="modal-reason-wrap" style="display:none">
+          <textarea id="modal-reject-reason" class="reject-input"
+                    placeholder="Tuliskan alasan reject..."></textarea>
+        </div>
+        <div class="modal-btns">
+          <button class="modal-cancel" id="modal-cancel">Batal</button>
+          <button class="modal-ok" id="modal-ok">Ya, Lanjutkan</button>
+        </div>
+      </div>
     </div>
   </div>
   <script src="https://lf1-cdn-tos.bytegoofy.com/goofy/lark/op/h5-js-sdk-1.5.20.js"></script>
@@ -83,6 +77,6 @@
   <script src="../../utils/auth.js?v=18"></script>
   <script src="../../utils/api.js?v=6"></script>
   <script src="../../utils/debug.js?v=3"></script>
-  <script src="index.js?v=1"></script>
+  <script src="index.js?v=2"></script>
 </body>
 </html>
