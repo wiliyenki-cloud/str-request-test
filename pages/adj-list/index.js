@@ -114,14 +114,19 @@ function renderList(records) {
 
   container.querySelectorAll('.card').forEach(function(card) {
     card.addEventListener('click', function() {
-      var s         = card.dataset.status;
-      var qs        = '?adj=' + encodeURIComponent(card.dataset.adj) +
-                      '&record=' + encodeURIComponent(card.dataset.record);
+      var s        = card.dataset.status;
+      var qs       = '?adj=' + encodeURIComponent(card.dataset.adj) +
+                     '&record=' + encodeURIComponent(card.dataset.record);
       var userIsICO = isICO(_currentUser.openId, _icoMap);
-      var dest = (userIsICO &&
-                  (s === CONFIG.STATUS_ADJ_WAITING_ICO || s === CONFIG.STATUS_ADJ_NEED_POSTING))
-        ? '../adj-ico-detail/index.html' + qs
-        : '../adj-detail/index.html'     + qs;
+      var userIsMgr = !userIsICO && !!_currentUser.openId && _mySites.length > 0;
+      var dest;
+      if (userIsICO && s === CONFIG.STATUS_ADJ_WAITING_ICO) {
+        dest = '../adj-ico-detail/index.html' + qs;  // ICO → State 1
+      } else if (userIsMgr && s === CONFIG.STATUS_ADJ_NEED_POSTING) {
+        dest = '../adj-ico-detail/index.html' + qs;  // Manager → State 2
+      } else {
+        dest = '../adj-detail/index.html' + qs;       // semua lainnya → read-only
+      }
       window.location.href = dest;
     });
   });
