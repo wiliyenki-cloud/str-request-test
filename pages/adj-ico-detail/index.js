@@ -50,7 +50,7 @@ function renderHeader(h) {
     ['ADJ Number',       h.adjNumber,      true],
     ['Site',             h.site + (h.siteName ? ' — ' + h.siteName : ''), false],
     ['Department',       h.department,     false],
-    ['Jenis Adjustment', h.jenis,          false],
+    ['Jenis Adjusment', h.jenis,          false],
     ['Keterangan',       h.keterangan,     false],
     ['Status',           h.status,         false],
     ['Requested By',     h.requestedBy,    false],
@@ -144,7 +144,7 @@ function loadDetail() {
     _recordId      = h.record_id;
     _currentStatus = fieldText(h.fields['Status']);
     _keterangan    = fieldText(h.fields['Keterangan Adjustment']);
-    var jenis = fieldText(h.fields['Jenis Adjustment']);
+    var jenis = fieldText(h.fields['Jenis Adjusment']);
     var isA2A = jenis === 'Article to Article';
 
     return larkSearch(

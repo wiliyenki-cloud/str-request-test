@@ -82,7 +82,7 @@ function mapRecords(records) {
       site:          fieldText(r.fields['Site']),
       siteName:      fieldText(r.fields['Site Name']),
       department:    fieldText(r.fields['Department']),
-      jenis:         fieldText(r.fields['Jenis Adjustment']),
+      jenis:         fieldText(r.fields['Jenis Adjusment']),
       keterangan:    fieldText(r.fields['Keterangan Adjustment']),
       status:        fieldText(r.fields['Status']),
       requestedBy:   fieldText(r.fields['Requested By']),

@@ -129,7 +129,7 @@ function loadList() {
           site:       fieldText(r.fields['Site']),
           siteName:   fieldText(r.fields['Site Name']),
           department: fieldText(r.fields['Department']),
-          jenis:      fieldText(r.fields['Jenis Adjustment']),
+          jenis:      fieldText(r.fields['Jenis Adjusment']),
           submitDate: fmtDate(r.fields['Submit Date'])
         };
       });

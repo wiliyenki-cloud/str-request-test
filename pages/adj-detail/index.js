@@ -24,7 +24,7 @@ function renderHeader(h) {
     ['ADJ Number',        h.adjNumber,      true],
     ['Site',              h.site + (h.siteName ? ' — ' + h.siteName : ''), false],
     ['Department',        h.department,     false],
-    ['Jenis Adjustment',  h.jenis,          false],
+    ['Jenis Adjusment',  h.jenis,          false],
     ['Keterangan',        h.keterangan,     false],
     ['Status',            h.status,         false],
     ['Requested By',      h.requestedBy,    false],
@@ -77,7 +77,7 @@ function loadDetail() {
   ).then(function(headers) {
     if (headers.length === 0) throw new Error('ADJ tidak ditemukan');
     var h     = headers[0];
-    var jenis = fieldText(h.fields['Jenis Adjustment']);
+    var jenis = fieldText(h.fields['Jenis Adjusment']);
 
     return larkSearch(
       CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_DETAIL_TABLE_ID,
