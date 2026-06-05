@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Process ADJ</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div class="page">
+    <div class="top-bar">
+      <button id="btn-back" class="btn-back">&#8592; Kembali</button>
+    </div>
+    <div id="screen-loading" class="center-msg"><p>Memuat detail...</p></div>
+    <div id="screen-error"   class="center-msg" style="display:none">
+      <p id="err-text" class="err-text"></p>
+    </div>
+    <div id="screen-content" style="display:none">
+      <div class="section" id="section-header"></div>
+      <div class="section">
+        <div class="section-title" id="items-title">Item List</div>
+        <div class="table-wrap" id="items-table"></div>
+      </div>
+      <!-- State 1: Nomor Reservasi -->
+      <div class="section" id="section-reservasi" style="display:none">
+        <div class="section-title">Nomor Reservasi SAP *</div>
+        <input type="text" id="reservasi-input" class="text-input"
+               placeholder="Masukkan nomor reservasi dari SAP...">
+      </div>
+      <!-- State 1 + Salah Jual Rugi: BA upload -->
+      <div class="section" id="section-ba" style="display:none">
+        <div class="section-title">BA Salju Rugi *</div>
+        <p class="info-hint">Upload BA terlebih dahulu, lalu kembali ke halaman ini untuk Process Done.</p>
+        <button class="btn-ba-upload" id="btn-ba-upload">&#128206; Upload BA Salju Rugi</button>
+      </div>
+      <!-- State 2: Approved By -->
+      <div class="section" id="section-approvedby" style="display:none">
+        <div class="section-title">Approved By (Nama NIP) *</div>
+        <input type="text" id="approvedby-input" class="text-input"
+               placeholder="Nama dan NIP Manager yang posting di SAP...">
+      </div>
+      <!-- Reject reason -->
+      <div class="section" id="section-reject" style="display:none">
+        <div class="section-title">Alasan Reject *</div>
+        <textarea id="reject-reason" class="reject-input"
+                  placeholder="Tuliskan alasan reject..."></textarea>
+      </div>
+    </div>
+    <div id="toast" class="toast" style="display:none"></div>
+
+    <!-- State 1 footer -->
+    <div class="footer footer-3" id="footer-state1" style="display:none">
+      <button class="btn-csv"    id="btn-csv">&#128229; CSV</button>
+      <button class="btn-reject" id="btn-start-reject1">Reject</button>
+      <button class="btn-done"   id="btn-process-done">Process Done</button>
+    </div>
+    <!-- State 1 confirm done -->
+    <div class="footer" id="footer-confirm-done" style="display:none">
+      <button class="btn-cancel"       id="btn-cancel-done">Batal</button>
+      <button class="btn-confirm-done" id="btn-confirm-done" disabled>Konfirmasi Done</button>
+    </div>
+    <!-- State 2 footer -->
+    <div class="footer" id="footer-state2" style="display:none">
+      <button class="btn-reject" id="btn-start-reject2">Reject</button>
+      <button class="btn-done"   id="btn-mark-posted">Mark as Posted</button>
+    </div>
+    <!-- State 2 confirm posted -->
+    <div class="footer" id="footer-confirm-posted" style="display:none">
+      <button class="btn-cancel"         id="btn-cancel-posted">Batal</button>
+      <button class="btn-confirm-posted" id="btn-confirm-posted" disabled>Konfirmasi Posted</button>
+    </div>
+    <!-- Reject confirm -->
+    <div class="footer" id="footer-reject" style="display:none">
+      <button class="btn-cancel"         id="btn-cancel-reject">Batal</button>
+      <button class="btn-confirm-reject" id="btn-confirm-reject" disabled>Konfirmasi Reject</button>
+    </div>
+  </div>
+  <script src="https://lf1-cdn-tos.bytegoofy.com/goofy/lark/op/h5-js-sdk-1.5.20.js"></script>
+  <script src="../../utils/config.js?v=9"></script>
+  <script src="../../utils/auth.js?v=15"></script>
+  <script src="../../utils/api.js?v=5"></script>
+  <script src="../../utils/debug.js?v=3"></script>
+  <script src="index.js?v=1"></script>
+</body>
+</html>

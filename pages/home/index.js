@@ -1,5 +1,6 @@
 var TABS_ALL = [
   { id: 'str-list', label: 'STR List',      icon: '📋', url: '../str-list/index.html' },
+  { id: 'adj-list', label: 'ADJ List',      icon: '📝', url: '../adj-list/index.html' },
   { id: 'approval', label: 'Need Approval', icon: '✅', url: '../approval/index.html' },
   { id: 'ico-list', label: 'Need Create',   icon: '📦', url: '../ico-list/index.html' }
 ];
