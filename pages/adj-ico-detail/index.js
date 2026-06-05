@@ -230,9 +230,8 @@ document.getElementById('btn-confirm-done').addEventListener('click', function()
   }, Promise.resolve());
   chain.then(function() {
     return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, _recordId, {
-      'Status':           CONFIG.STATUS_ADJ_NEED_POSTING,
-      'Nomor Reservasi':  reservasi,
-      'ICO Process Date': Date.now()
+      'Status':          CONFIG.STATUS_ADJ_NEED_POSTING,
+      'Nomor Reservasi': reservasi
     });
   }).then(function() {
     setActing(false);
@@ -265,9 +264,8 @@ document.getElementById('btn-confirm-posted').addEventListener('click', function
   if (!approvedBy) return;
   setActing(true);
   larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, _recordId, {
-    'Status':       CONFIG.STATUS_ADJ_DONE,
-    'Approved By':  approvedBy,
-    'Posting Date': Date.now()
+    'Status':      CONFIG.STATUS_ADJ_DONE,
+    'Approved By': approvedBy
   }).then(function() {
     setActing(false);
     showToast('ADJ Done! Posting selesai.', '#2e7d32');
