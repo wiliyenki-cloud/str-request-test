@@ -1,5 +1,6 @@
 // getUserInfo — requestAuthCode HANYA dipanggil dari home page (URL terdaftar di Dev Console).
-// Halaman lain baca dari localStorage cache. Cache TTL = 30 menit.
+// Sub-page lain: baca dari localStorage cache. Kalau tidak ada cache → redirect ke home.
+// Cache TTL = 30 menit.
 //
 // Redirect URL yang perlu didaftarkan di Developer Console:
 //   https://wiliyenki-sudo.github.io/str-request/lark-mini-app/pages/home/index.html
@@ -23,13 +24,12 @@ function _saveCache(user) {
 }
 
 function _readCache() {
-  // Hanya gunakan cache kalau openId ada (abaikan anonymous yang tersimpan)
   if (_userInfoMem && _userInfoMem.openId) return _userInfoMem;
   try {
     var raw = localStorage.getItem(_CACHE_KEY);
     if (!raw) return null;
     var c = JSON.parse(raw);
-    if (!c || !c.ts || !c.openId) return null;   // abaikan cache anonymous
+    if (!c || !c.ts || !c.openId) return null;
     if (Date.now() - c.ts > _CACHE_TTL) {
       localStorage.removeItem(_CACHE_KEY);
       return null;
@@ -38,28 +38,36 @@ function _readCache() {
   } catch(e) { return null; }
 }
 
+function _isHomePage() {
+  return location.pathname.indexOf('/home/') !== -1;
+}
+
 function getUserInfo() {
   return new Promise(function(resolve) {
-    // 1. Check localStorage cache
+    // 1. Check localStorage cache — berlaku untuk semua halaman
     var cached = _readCache();
     if (cached) {
       _userInfoMem = cached;
-      if (typeof dbg === 'function') dbg('auth: cache hit openId=' + (cached.openId || '(empty)') + ' nick=' + cached.nickName);
+      if (typeof dbg === 'function') dbg('auth: cache hit openId=' + cached.openId + ' nick=' + cached.nickName);
       resolve(cached);
       return;
     }
 
+    // 2. Tidak ada cache — kalau bukan home page, redirect ke home untuk auth
+    if (!_isHomePage()) {
+      if (typeof dbg === 'function') dbg('auth: no cache + not home → redirect to home');
+      window.location.href = '../home/index.html';
+      return; // halaman akan navigate away, Promise tidak perlu resolve
+    }
+
+    // 3. Di home page tanpa cache — lakukan requestAuthCode
     if (typeof tt === 'undefined' || typeof tt.requestAuthCode !== 'function') {
       if (typeof dbg === 'function') dbg('auth: tt not available → anonymous');
-      var anon = { openId: '', nickName: 'User' };
-      _saveCache(anon);
-      resolve(anon);
+      resolve({ openId: '', nickName: 'User' });
       return;
     }
 
-    // 2. Try requestAuthCode from any page
-    // (Lark allows it once any URL is registered in redirect URLs)
-    if (typeof dbg === 'function') dbg('auth: trying requestAuthCode from ' + location.pathname.split('/').pop() + '...');
+    if (typeof dbg === 'function') dbg('auth: requestAuthCode dari home...');
     tt.requestAuthCode({
       appId: CONFIG.APP_ID,
       success: function(res) {
@@ -67,33 +75,19 @@ function getUserInfo() {
         gasProxy({ action: 'getUserByCode', code: res.code })
           .then(function(data) {
             var user = { openId: data.openId || '', nickName: data.nickName || 'User' };
-            if (typeof dbg === 'function') dbg('auth: GAS OK openId=' + (user.openId || '(empty)') + ' nick=' + user.nickName);
+            if (typeof dbg === 'function') dbg('auth: GAS OK openId=' + user.openId + ' nick=' + user.nickName);
             _saveCache(user);
             resolve(user);
           })
           .catch(function(e) {
             if (typeof dbg === 'function') dbg('auth: GAS FAIL ' + (e.message || String(e)));
-            if (typeof dbg === 'function') dbg('auth: → update GAS dulu!');
-            var anon3 = { openId: '', nickName: 'User' };
-            _saveCache(anon3);
-            resolve(anon3);
+            resolve({ openId: '', nickName: 'User' });
           });
       },
       fail: function(err) {
         var msg = (err && (err.errString || err.errMsg)) || JSON.stringify(err || {});
         if (typeof dbg === 'function') dbg('auth: requestAuthCode FAIL ' + msg.slice(0, 150));
-        // Error 10236 = URL not registered → redirect to home for proper auth
-        // (home URL is the one registered in Developer Console)
-        var isInvalidUrl = msg.indexOf('10236') !== -1 || msg.indexOf('invalid url') !== -1;
-        var isHomePage   = location.pathname.indexOf('/home/') !== -1;
-        if (isInvalidUrl && !isHomePage) {
-          if (typeof dbg === 'function') dbg('auth: invalid URL → redirect to home for auth');
-          window.location.href = '../home/index.html';
-          return;
-        }
-        var anon4 = { openId: '', nickName: 'User' };
-        _saveCache(anon4);
-        resolve(anon4);
+        resolve({ openId: '', nickName: 'User' });
       }
     });
   });
@@ -104,9 +98,6 @@ function getUserInfo() {
 //   'ico'     → always ICO regardless of openId
 //   'manager' → never ICO (force manager role)
 //   absent    → auto-detect from icoMap (Master Mapping ICO table)
-//
-// icoMap (optional): { openId: [siteCode, ...] } built from Master Mapping ICO.
-// If not provided, falls back to hardcoded ICO_USER_IDS (backward compat).
 function isICO(openId, icoMap) {
   try {
     var ov = sessionStorage.getItem('_roleOverride');
