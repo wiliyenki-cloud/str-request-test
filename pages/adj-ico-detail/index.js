@@ -230,8 +230,9 @@ document.getElementById('btn-confirm-done').addEventListener('click', function()
   }, Promise.resolve());
   chain.then(function() {
     return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, _recordId, {
-      'Status':          CONFIG.STATUS_ADJ_NEED_POSTING,
-      'Nomor Reservasi': reservasi
+      'Status':           CONFIG.STATUS_ADJ_NEED_POSTING,
+      'Nomor Reservasi':  reservasi,
+      'ICO Process Date': Date.now()
     });
   }).then(function() {
     setActing(false);
