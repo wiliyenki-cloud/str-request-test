@@ -82,6 +82,15 @@ function getUserInfo() {
       fail: function(err) {
         var msg = (err && (err.errString || err.errMsg)) || JSON.stringify(err || {});
         if (typeof dbg === 'function') dbg('auth: requestAuthCode FAIL ' + msg.slice(0, 150));
+        // Error 10236 = URL not registered → redirect to home for proper auth
+        // (home URL is the one registered in Developer Console)
+        var isInvalidUrl = msg.indexOf('10236') !== -1 || msg.indexOf('invalid url') !== -1;
+        var isHomePage   = location.pathname.indexOf('/home/') !== -1;
+        if (isInvalidUrl && !isHomePage) {
+          if (typeof dbg === 'function') dbg('auth: invalid URL → redirect to home for auth');
+          window.location.href = '../home/index.html';
+          return;
+        }
         var anon4 = { openId: '', nickName: 'User' };
         _saveCache(anon4);
         resolve(anon4);
