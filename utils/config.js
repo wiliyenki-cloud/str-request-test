@@ -29,5 +29,15 @@ var CONFIG = {
   // Google Apps Script deployment URL
   GAS_URL: 'https://script.google.com/macros/s/AKfycbzrMwaLg05__oyenINj69tvTo43scfDEGgPNjSPHBq--LN0pS-6g6CCElG63pHxLwd7/exec',
 
-  API_BASE: 'https://open.larksuite.com'
+  API_BASE: 'https://open.larksuite.com',
+
+  // ADJ Centralization (same STR_BASE_APP_TOKEN, tabel baru)
+  ADJ_HEADER_TABLE_ID: 'tblFGno3ONx4BseJ',
+  ADJ_DETAIL_TABLE_ID: 'tblUShPPgJW3fqBn',
+
+  // ADJ Status values (exact strings matching Lark Base Single Select options)
+  STATUS_ADJ_WAITING_ICO:  'Waiting Create by ICO',
+  STATUS_ADJ_NEED_POSTING: 'Need Posting by Mgr',
+  STATUS_ADJ_DONE:         'Done Create ADJ',
+  STATUS_ADJ_REJECT:       'Reject'
 };
