@@ -58,7 +58,10 @@ function larkUpdate(appToken, tableId, recordId, fields) {
     tableId: tableId,
     recordId: recordId,
     fields: JSON.stringify(fields)
-  }).then(function(d) { return d.record || d; });
+  }).then(function(d) {
+    if (d == null) return {};
+    return d.record || d;
+  });
 }
 
 function larkCreate(appToken, tableId, fields) {
