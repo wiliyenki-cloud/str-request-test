@@ -196,8 +196,9 @@ function applyFilter(allSTR, user, mySites, icoMap) {
     if (typeof dbg === 'function') dbg('role: Manager sites=[' + mySites.join(',') + '] → ' + filtered.length + ' records');
     return filtered;
   }
-  if (typeof dbg === 'function') dbg('role: anonymous/unmatched → show all ' + allSTR.length + ' records');
-  return allSTR;
+  // No role / no site assigned → no data
+  if (typeof dbg === 'function') dbg('role: no role → empty list (openId=' + user.openId + ')');
+  return [];
 }
 
 function loadList() {
@@ -256,15 +257,8 @@ function loadList() {
     });
   }).catch(function(err) {
     if (typeof dbg === 'function') dbg('❌ getUserInfo error: ' + (err.message || String(err)));
-    larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, null)
-      .then(function(records) {
-        _allRecords = mapRecords(records);
-        renderList(_allRecords);
-      })
-      .catch(function(err2) {
-        document.getElementById('err-text').textContent = 'Gagal memuat: ' + (err2.message || String(err2));
-        show('screen-error');
-      });
+    document.getElementById('err-text').textContent = 'Gagal autentikasi: ' + (err.message || String(err));
+    show('screen-error');
   });
 }
 

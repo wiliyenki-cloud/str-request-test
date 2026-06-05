@@ -43,11 +43,10 @@ function loadList() {
       .then(function(siteRecords) {
         var mySites = siteRecords
           .filter(function(r) {
+            if (!openId) return false; // anonymous → no sites
             var smUsers = r.fields[CONFIG.MASTER_SM_USER_FIELD];
             if (!smUsers) return false;
             var arr = Array.isArray(smUsers) ? smUsers : [smUsers];
-            // If no openId (scope not configured), show all sites
-            if (!openId) return true;
             return arr.some(function(u) {
               return (u.id || u.open_id || u.openId) === openId;
             });
@@ -63,8 +62,6 @@ function loadList() {
         ).then(function(strRecords) {
           var list = strRecords
             .filter(function(r) {
-              // Filter by manager's sites (skip if openId unknown — show all)
-              if (!openId) return true;
               return mySites.indexOf(fieldText(r.fields['Site'])) !== -1;
             })
             .map(function(r) {

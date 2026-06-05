@@ -189,7 +189,7 @@ function loadList() {
       } else if (user.openId && mySites.length > 0) {
         visible = adjRecords.filter(function(r) { return mySites.indexOf(fieldText(r.fields['Site'])) !== -1; });
       } else {
-        visible = adjRecords;
+        visible = []; // No role / no site → no data
       }
 
       _allRecords = mapRecords(visible);
