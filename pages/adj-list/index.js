@@ -1,9 +1,16 @@
-var _allRecords   = [];
-var _activeFilter = 'all';
-var _currentUser  = { openId: '', nickName: 'User' };
-var _mySites      = [];
-var _searchText   = '';
-var _icoMap       = {};
+var _allRecords    = [];
+var _activeFilter  = 'all';
+var _currentUser   = { openId: '', nickName: 'User' };
+var _mySites       = [];
+var _searchText    = '';
+var _icoMap        = {};
+
+// Master Detail state
+var _allDetails    = [];
+var _detailsLoaded = false;
+var _headerMap     = {};
+var _currentPage   = 1;
+var _pageSize      = 10;
 
 function toDateInput(d) {
   var m = d.getMonth() + 1; var day = d.getDate();
@@ -77,22 +84,29 @@ function filterRecords(records, filter) {
 function mapRecords(records) {
   return records.map(function(r) {
     return {
-      recordId:      r.record_id,
-      adjNumber:     fieldText(r.fields['ADJ Number']),
-      site:          fieldText(r.fields['Site']),
-      siteName:      fieldText(r.fields['Site Name']),
-      department:    fieldText(r.fields['Department']),
-      jenis:         fieldText(r.fields['Jenis Adjusment']),
-      keterangan:    fieldText(r.fields['Keterangan Adjustment']),
-      status:        fieldText(r.fields['Status']),
-      requestedBy:   fieldText(r.fields['Requested By']),
-      submitDate:    fmtDate(r.fields['Submit Date']),
-      submitDateRaw: r.fields['Submit Date'] || 0
+      recordId:        r.record_id,
+      adjNumber:       fieldText(r.fields['ADJ Number']),
+      site:            fieldText(r.fields['Site']),
+      siteName:        fieldText(r.fields['Site Name']),
+      department:      fieldText(r.fields['Department']),
+      jenis:           fieldText(r.fields['Jenis Adjusment']),
+      keterangan:      fieldText(r.fields['Keterangan Adjustment']),
+      status:          fieldText(r.fields['Status']),
+      requestedBy:     fieldText(r.fields['Requested By']),
+      submitDate:      fmtDate(r.fields['Submit Date']),
+      submitDateRaw:   r.fields['Submit Date'] || 0,
+      nomorReservasi:  fieldText(r.fields['Nomor Reservasi']),
+      approvedBy:      fieldText(r.fields['Approved By']),
+      icoProcessDate:  fmtDate(r.fields['ICO Process Date'])
     };
   });
 }
 
 function renderList(records) {
+  if (_activeFilter === 'master-detail') {
+    if (!_detailsLoaded) { loadDetails(); } else { renderMasterDetail(); }
+    return;
+  }
   var filtered = filterRecords(records, _activeFilter);
   if (filtered.length === 0) { show('screen-empty'); return; }
   var container = document.getElementById('list-container');
@@ -121,11 +135,11 @@ function renderList(records) {
       var userIsMgr = !userIsICO && !!_currentUser.openId && _mySites.length > 0;
       var dest;
       if (userIsICO && s === CONFIG.STATUS_ADJ_WAITING_ICO) {
-        dest = '../adj-ico-detail/index.html' + qs;  // ICO → State 1
+        dest = '../adj-ico-detail/index.html' + qs;
       } else if (userIsMgr && s === CONFIG.STATUS_ADJ_NEED_POSTING) {
-        dest = '../adj-ico-detail/index.html' + qs;  // Manager → State 2
+        dest = '../adj-ico-detail/index.html' + qs;
       } else {
-        dest = '../adj-detail/index.html' + qs;       // semua lainnya → read-only
+        dest = '../adj-detail/index.html' + qs;
       }
       window.location.href = dest;
     });
@@ -194,10 +208,15 @@ function loadList() {
       } else if (user.openId && mySites.length > 0) {
         visible = adjRecords.filter(function(r) { return mySites.indexOf(fieldText(r.fields['Site'])) !== -1; });
       } else {
-        visible = []; // No role / no site → no data
+        visible = [];
       }
 
       _allRecords = mapRecords(visible);
+      // Build lookup map for Master Detail join; reset detail cache
+      _headerMap     = {};
+      _allRecords.forEach(function(h) { _headerMap[h.adjNumber] = h; });
+      _detailsLoaded = false;
+      _allDetails    = [];
       renderList(_allRecords);
     }).catch(function(err) {
       document.getElementById('err-text').textContent = 'Gagal memuat: ' + (err.message || String(err));
@@ -209,6 +228,182 @@ function loadList() {
   });
 }
 
+// ── Master Detail ─────────────────────────────────────────────────────────────
+
+function loadDetails() {
+  show('screen-loading');
+  larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_DETAIL_TABLE_ID, null)
+    .then(function(records) {
+      _allDetails = records.map(function(r) {
+        var adjNum = fieldText(r.fields['ADJ Number']);
+        var hdr    = _headerMap[adjNum] || {};
+        return {
+          adjNumber:      adjNum,
+          site:           hdr.site           || '',
+          siteName:       hdr.siteName       || '',
+          department:     hdr.department     || '',
+          jenis:          hdr.jenis          || '',
+          keterangan:     hdr.keterangan     || '',
+          status:         hdr.status         || '',
+          submitDate:     hdr.submitDate     || '-',
+          submitDateRaw:  hdr.submitDateRaw  || 0,
+          requestedBy:    hdr.requestedBy    || '',
+          nomorReservasi: hdr.nomorReservasi || '',
+          approvedBy:     hdr.approvedBy     || '',
+          icoProcessDate: hdr.icoProcessDate || '-',
+          fromArticle:    fieldText(r.fields['From Article']),
+          toArticle:      fieldText(r.fields['To Article']),
+          qty:            r.fields['Qty'] != null ? r.fields['Qty'] : '',
+          articleDoc:     fieldText(r.fields['Article Doc Adjustment'])
+        };
+      }).filter(function(d) {
+        // Hanya baris yang header-nya visible (punya site) + status Need Posting / Done
+        var allowed = [CONFIG.STATUS_ADJ_NEED_POSTING, CONFIG.STATUS_ADJ_DONE];
+        return !!d.site && allowed.indexOf(d.status) !== -1;
+      });
+      _detailsLoaded = true;
+      renderMasterDetail();
+    })
+    .catch(function(err) {
+      document.getElementById('err-text').textContent = 'Gagal memuat detail: ' + (err.message || String(err));
+      show('screen-error');
+    });
+}
+
+function filterDetails() {
+  var result = _allDetails;
+  if (_searchText) {
+    var q = _searchText.toLowerCase();
+    result = result.filter(function(d) {
+      return (d.adjNumber      && d.adjNumber.toLowerCase().indexOf(q)      !== -1) ||
+             (d.fromArticle    && d.fromArticle.toLowerCase().indexOf(q)    !== -1) ||
+             (d.toArticle      && d.toArticle.toLowerCase().indexOf(q)      !== -1) ||
+             (d.requestedBy    && d.requestedBy.toLowerCase().indexOf(q)    !== -1) ||
+             (d.nomorReservasi && d.nomorReservasi.toLowerCase().indexOf(q) !== -1);
+    });
+  }
+  if (_dateFrom) {
+    var from = dayStartMs(_dateFrom);
+    result = result.filter(function(d) { return d.submitDateRaw >= from; });
+  }
+  if (_dateTo) {
+    var to = dayEndMs(_dateTo);
+    result = result.filter(function(d) { return d.submitDateRaw <= to; });
+  }
+  return result;
+}
+
+function exportCSV(data) {
+  var cols = ['ADJ Number','Site','Dept','Jenis','Keterangan','Status','No Reservasi',
+              'From Article','To Article','Qty','Article Doc','Requester','Submit Date',
+              'ICO Process Date','Approved By'];
+  var rows = [cols.join(',')];
+  data.forEach(function(d) {
+    rows.push([
+      '"' + String(d.adjNumber).replace(/"/g,'""')      + '"',
+      '"' + String(d.site).replace(/"/g,'""')           + '"',
+      '"' + String(d.department).replace(/"/g,'""')     + '"',
+      '"' + String(d.jenis).replace(/"/g,'""')          + '"',
+      '"' + String(d.keterangan).replace(/"/g,'""')     + '"',
+      '"' + String(d.status).replace(/"/g,'""')         + '"',
+      '"' + String(d.nomorReservasi).replace(/"/g,'""') + '"',
+      '"' + String(d.fromArticle).replace(/"/g,'""')    + '"',
+      '"' + String(d.toArticle).replace(/"/g,'""')      + '"',
+      String(d.qty),
+      '"' + String(d.articleDoc).replace(/"/g,'""')     + '"',
+      '"' + String(d.requestedBy).replace(/"/g,'""')    + '"',
+      '"' + String(d.submitDate).replace(/"/g,'""')     + '"',
+      '"' + String(d.icoProcessDate).replace(/"/g,'""') + '"',
+      '"' + String(d.approvedBy).replace(/"/g,'""')     + '"'
+    ].join(','));
+  });
+  var csv  = '﻿' + rows.join('\r\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'ADJ-Master-Detail-' + toDateInput(new Date()) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function renderMasterDetail() {
+  var filtered   = filterDetails();
+  var totalPages = Math.ceil(filtered.length / _pageSize) || 1;
+  if (_currentPage > totalPages) _currentPage = 1;
+  var start    = (_currentPage - 1) * _pageSize;
+  var pageData = filtered.slice(start, start + _pageSize);
+  var container = document.getElementById('list-container');
+
+  if (filtered.length === 0) { show('screen-empty'); return; }
+
+  var toolbar = '<div class="tbl-toolbar">' +
+    '<span class="tbl-info">' + filtered.length + ' data</span>' +
+    '<button class="btn-export" id="btn-export-csv">&#128229; Export Excel</button>' +
+    '</div>';
+
+  var tbl = '<div class="tbl-wrap"><table class="str-table">' +
+    '<thead><tr>' +
+      '<th>ADJ Number</th><th>Site</th><th>Status</th>' +
+      '<th>From Article</th><th>To Article</th><th>Qty</th>' +
+      '<th>No Reservasi</th><th>Article Doc</th><th>Submit</th>' +
+    '</tr></thead><tbody>' +
+    pageData.map(function(d) {
+      return '<tr>' +
+        '<td style="font-weight:700;color:#1565c0;">' + escHtml(d.adjNumber)       + '</td>' +
+        '<td>' + escHtml(d.site)                                                    + '</td>' +
+        '<td><span class="badge ' + statusBadgeClass(d.status) + '">' + escHtml(d.status) + '</span></td>' +
+        '<td>' + escHtml(d.fromArticle)                                             + '</td>' +
+        '<td>' + escHtml(d.toArticle)                                               + '</td>' +
+        '<td class="num">' + escHtml(String(d.qty))                                 + '</td>' +
+        '<td>' + escHtml(d.nomorReservasi)                                          + '</td>' +
+        '<td>' + escHtml(d.articleDoc)                                              + '</td>' +
+        '<td>' + escHtml(d.submitDate)                                              + '</td>' +
+      '</tr>';
+    }).join('') +
+    '</tbody></table></div>';
+
+  var pag = '';
+  if (totalPages > 1) {
+    var rangeStart = Math.max(1, _currentPage - 2);
+    var rangeEnd   = Math.min(totalPages, _currentPage + 2);
+    var pBtns = '';
+    if (rangeStart > 1) {
+      pBtns += '<button class="pg-btn" data-page="1">1</button>';
+      if (rangeStart > 2) pBtns += '<span class="pg-ell">…</span>';
+    }
+    for (var i = rangeStart; i <= rangeEnd; i++) {
+      pBtns += '<button class="pg-btn' + (i === _currentPage ? ' pg-active' : '') + '" data-page="' + i + '">' + i + '</button>';
+    }
+    if (rangeEnd < totalPages) {
+      if (rangeEnd < totalPages - 1) pBtns += '<span class="pg-ell">…</span>';
+      pBtns += '<button class="pg-btn" data-page="' + totalPages + '">' + totalPages + '</button>';
+    }
+    pag = '<div class="pagination">' +
+      '<button class="pg-btn" id="pg-prev"' + (_currentPage === 1 ? ' disabled' : '') + '>&#8249;</button>' +
+      pBtns +
+      '<button class="pg-btn" id="pg-next"' + (_currentPage === totalPages ? ' disabled' : '') + '>&#8250;</button>' +
+    '</div>';
+  }
+
+  container.innerHTML = toolbar + tbl + pag;
+
+  document.getElementById('btn-export-csv').addEventListener('click', function() { exportCSV(filtered); });
+  container.querySelectorAll('.pg-btn[data-page]').forEach(function(btn) {
+    btn.addEventListener('click', function() { _currentPage = parseInt(btn.dataset.page, 10); renderMasterDetail(); });
+  });
+  var prev = document.getElementById('pg-prev');
+  var next = document.getElementById('pg-next');
+  if (prev) prev.addEventListener('click', function() { if (_currentPage > 1) { _currentPage--; renderMasterDetail(); } });
+  if (next) next.addEventListener('click', function() { if (_currentPage < totalPages) { _currentPage++; renderMasterDetail(); } });
+
+  show('screen-list');
+}
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+
 document.getElementById('btn-back').addEventListener('click', function() {
   window.location.href = '../home/index.html';
 });
@@ -219,6 +414,7 @@ document.getElementById('filter-tabs').querySelectorAll('.filter-tab').forEach(f
     document.querySelectorAll('.filter-tab').forEach(function(t) { t.classList.remove('active'); });
     tab.classList.add('active');
     _activeFilter = tab.dataset.filter;
+    _currentPage  = 1;
     renderList(_allRecords);
   });
 });
@@ -227,12 +423,13 @@ var _searchTimer = null;
 document.getElementById('search-input').addEventListener('input', function() {
   clearTimeout(_searchTimer);
   var val = this.value;
-  _searchTimer = setTimeout(function() { _searchText = val.trim(); renderList(_allRecords); }, 300);
+  _searchTimer = setTimeout(function() { _searchText = val.trim(); _currentPage = 1; renderList(_allRecords); }, 300);
 });
-document.getElementById('date-from').addEventListener('change', function() { _dateFrom = this.value; renderList(_allRecords); });
-document.getElementById('date-to').addEventListener('change',   function() { _dateTo   = this.value; renderList(_allRecords); });
+document.getElementById('date-from').addEventListener('change', function() { _dateFrom = this.value; _currentPage = 1; renderList(_allRecords); });
+document.getElementById('date-to').addEventListener('change',   function() { _dateTo   = this.value; _currentPage = 1; renderList(_allRecords); });
 document.getElementById('btn-clear-dates').addEventListener('click', function() {
   _dateFrom = ''; _dateTo = '';
+  _currentPage = 1;
   document.getElementById('date-from').value = '';
   document.getElementById('date-to').value   = '';
   renderList(_allRecords);
