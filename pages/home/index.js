@@ -1,8 +1,9 @@
 var TABS_ALL = [
-  { id: 'str-list', label: 'STR List',      desc: 'Lihat & kelola request STR', icon: '📋', url: '../str-list/index.html' },
-  { id: 'adj-list', label: 'ADJ List',      desc: 'Lihat & kelola request ADJ', icon: '📝', url: '../adj-list/index.html' },
-  { id: 'approval', label: 'Need Approval', desc: 'STR menunggu persetujuan',   icon: '✅', url: '../approval/index.html' },
-  { id: 'ico-list', label: 'Need Create',   desc: 'STR & ADJ siap diproses',   icon: '📦', url: '../ico-list/index.html' }
+  { id: 'str-list',   label: 'STR List',      desc: 'Lihat & kelola request STR',  icon: '📋', url: '../str-list/index.html' },
+  { id: 'adj-list',   label: 'ADJ List',      desc: 'Lihat & kelola request ADJ',  icon: '📝', url: '../adj-list/index.html' },
+  { id: 'adj-master', label: 'ADJ Master',    desc: 'Status article & download history', icon: '📊', url: '../adj-master/index.html' },
+  { id: 'approval',   label: 'Need Approval', desc: 'STR menunggu persetujuan',    icon: '✅', url: '../approval/index.html' },
+  { id: 'ico-list',   label: 'Need Create',   desc: 'STR & ADJ siap diproses',     icon: '📦', url: '../ico-list/index.html' }
 ];
 
 function showEl(id) {

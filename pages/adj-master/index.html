@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADJ Master Detail</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div class="page">
+    <div class="top-bar">
+      <button id="btn-back" class="btn-back">&#8592; Home</button>
+      <span class="top-title">ADJ Master Detail</span>
+      <button id="btn-download" class="btn-download">&#128229; History</button>
+    </div>
+    <div class="filter-tabs" id="filter-tabs">
+      <div class="filter-tab active" data-filter="all">All</div>
+      <div class="filter-tab" data-filter="need-posting">Need Posting</div>
+      <div class="filter-tab" data-filter="done">Done</div>
+    </div>
+    <div class="filter-bar">
+      <input type="text" id="search-input" class="search-input"
+             placeholder="&#128269; ADJ / Article / Requester...">
+      <div class="date-row">
+        <input type="date" id="date-from" class="date-input" title="Submit Date dari">
+        <span class="date-sep">&ndash;</span>
+        <input type="date" id="date-to"   class="date-input" title="Submit Date sampai">
+        <button id="btn-clear-dates" class="btn-clear-dates" title="Reset tanggal">&#x2715;</button>
+      </div>
+    </div>
+    <div id="screen-loading" class="center-msg"><p>Memuat data...</p></div>
+    <div id="screen-error"   class="center-msg" style="display:none">
+      <p id="err-text" class="err-text"></p>
+      <button id="btn-retry" class="btn-retry">Coba Lagi</button>
+    </div>
+    <div id="screen-empty"  class="center-msg" style="display:none"><p>Tidak ada data ADJ.</p></div>
+    <div id="screen-list" style="display:none">
+      <div class="result-count" id="result-count"></div>
+      <div class="table-wrap" id="table-wrap"></div>
+    </div>
+    <div id="toast" class="toast" style="display:none"></div>
+  </div>
+  <script src="https://lf1-cdn-tos.bytegoofy.com/goofy/lark/op/h5-js-sdk-1.5.20.js"></script>
+  <script src="../../utils/config.js?v=9"></script>
+  <script src="../../utils/auth.js?v=18"></script>
+  <script src="../../utils/api.js?v=6"></script>
+  <script src="../../utils/debug.js?v=3"></script>
+  <script src="index.js?v=1"></script>
+</body>
+</html>
