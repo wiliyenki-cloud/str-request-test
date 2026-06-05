@@ -70,23 +70,32 @@ function _isHomePage() {
 
 function getUserInfo() {
   return new Promise(function(resolve) {
-    // 1. Cek cache (localStorage → sessionStorage)
     var cached = _readCache();
-    if (cached !== null) {
+
+    // Sub-page: cache APA SAJA (termasuk anon) cegah redirect loop
+    if (!_isHomePage()) {
+      if (cached !== null) {
+        _userInfoMem = cached;
+        if (typeof dbg === 'function') dbg('auth: sub-page cache hit openId=' + (cached.openId || '(anon)') + ' nick=' + cached.nickName);
+        resolve(cached);
+        return;
+      }
+      // Benar-benar tidak ada cache → redirect ke home
+      if (typeof dbg === 'function') dbg('auth: no cache + not home → redirect to home');
+      window.location.href = '../home/index.html';
+      return;
+    }
+
+    // Home page: hanya pakai cache kalau openId ADA (real user)
+    // Kalau cache-nya anonymous → tetap jalankan requestAuthCode untuk upgrade ke real user
+    if (cached !== null && cached.openId) {
       _userInfoMem = cached;
-      if (typeof dbg === 'function') dbg('auth: cache hit openId=' + (cached.openId || '(anon)') + ' nick=' + cached.nickName);
+      if (typeof dbg === 'function') dbg('auth: home cache hit openId=' + cached.openId + ' nick=' + cached.nickName);
       resolve(cached);
       return;
     }
 
-    // 2. Tidak ada cache — kalau bukan home page, redirect ke home untuk auth
-    if (!_isHomePage()) {
-      if (typeof dbg === 'function') dbg('auth: no cache + not home → redirect to home');
-      window.location.href = '../home/index.html';
-      return; // halaman akan navigate away
-    }
-
-    // 3. Di home page tanpa cache — requestAuthCode
+    // Home page tanpa real user → requestAuthCode
     if (typeof tt === 'undefined' || typeof tt.requestAuthCode !== 'function') {
       if (typeof dbg === 'function') dbg('auth: tt not available → anonymous (saved to session)');
       var anon = { openId: '', nickName: 'User' };
