@@ -219,7 +219,10 @@ function loadDetail() {
         if (_keterangan === 'Salah Jual Rugi') {
           document.getElementById('section-ba').style.display = '';
           document.getElementById('btn-ba-upload').onclick = function() {
-            var url = CONFIG.GAS_URL + '?action=baUploadForm&adjNumber=' + encodeURIComponent(_adjNumber);
+            var url = CONFIG.GAS_URL +
+              '?action=baUploadForm' +
+              '&adjNumber='  + encodeURIComponent(_adjNumber) +
+              '&returnUrl='  + encodeURIComponent(window.location.href);
             window.open(url, '_blank');
           };
         }
