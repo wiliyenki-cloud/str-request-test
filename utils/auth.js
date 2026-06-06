@@ -16,36 +16,28 @@ var _CACHE_TTL   = 30 * 60 * 1000; // 30 menit
 
 function _saveCache(user) {
   _userInfoMem = user;
-  // Selalu simpan ke sessionStorage — mencegah redirect loop meskipun auth gagal
-  try {
-    sessionStorage.setItem(_SESS_KEY, JSON.stringify({
-      openId:   user.openId   || '',
-      nickName: user.nickName || 'User',
-      ts:       Date.now()
-    }));
-  } catch(e) {}
-  // Hanya simpan ke localStorage kalau openId ada (persistent real user)
-  if (user.openId) {
-    try {
-      localStorage.setItem(_CACHE_KEY, JSON.stringify({
-        openId:   user.openId,
-        nickName: user.nickName,
-        ts:       Date.now()
-      }));
-    } catch(e) {}
-  }
+  var entry = JSON.stringify({
+    openId:   user.openId   || '',
+    nickName: user.nickName || 'User',
+    ts:       Date.now()
+  });
+  // Simpan ke sessionStorage
+  try { sessionStorage.setItem(_SESS_KEY, entry); } catch(e) {}
+  // Simpan ke localStorage untuk SEMUA user (termasuk anonymous) supaya survive
+  // cross-origin navigation (misal: navigate ke GAS upload lalu balik ke mini app)
+  try { localStorage.setItem(_CACHE_KEY, entry); } catch(e) {}
 }
 
 function _readCache() {
   // 1. In-memory (sama page lifetime, cek dulu)
   if (_userInfoMem !== null) return _userInfoMem;
-  // 2. localStorage — persistent, hanya real user (openId ada)
+  // 2. localStorage — persistent (termasuk anonymous), survive cross-origin navigation
   try {
     var raw = localStorage.getItem(_CACHE_KEY);
     if (raw) {
       var c = JSON.parse(raw);
-      if (c && c.ts && c.openId && (Date.now() - c.ts <= _CACHE_TTL)) {
-        return { openId: c.openId, nickName: c.nickName || 'User' };
+      if (c && c.ts && (Date.now() - c.ts <= _CACHE_TTL)) {
+        return { openId: c.openId || '', nickName: c.nickName || 'User' };
       }
       localStorage.removeItem(_CACHE_KEY);
     }
