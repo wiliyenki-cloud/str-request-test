@@ -232,7 +232,7 @@ function loadDetail() {
               '?action=baUploadForm' +
               '&adjNumber='  + encodeURIComponent(_adjNumber) +
               '&returnUrl='  + encodeURIComponent(window.location.href);
-            window.open(url, '_blank');
+            window.location.href = url;
           };
         }
         showFooter('footer-state1');
