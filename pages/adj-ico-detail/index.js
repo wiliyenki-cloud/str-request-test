@@ -4,6 +4,7 @@ var _acting        = false;
 var _currentStatus = '';
 var _keterangan    = '';
 var _itemsCache    = [];
+var _currentUser   = { openId: '', nickName: 'User' };
 
 function getParams() {
   var qs = location.search.substring(1);
@@ -172,10 +173,13 @@ function downloadCsv() {
 
 function loadDetail() {
   show('screen-loading');
-  larkSearch(
-    CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID,
-    { conjunction: 'and', conditions: [{ field_name: 'ADJ Number', operator: 'is', value: [_adjNumber] }] }
-  ).then(function(headers) {
+  getUserInfo().then(function(user) {
+    _currentUser = user;
+    return larkSearch(
+      CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID,
+      { conjunction: 'and', conditions: [{ field_name: 'ADJ Number', operator: 'is', value: [_adjNumber] }] }
+    );
+  }).then(function(headers) {
     if (headers.length === 0) throw new Error('ADJ tidak ditemukan');
     var h = headers[0];
     _recordId      = h.record_id;
@@ -216,6 +220,11 @@ function loadDetail() {
       if (_currentStatus === CONFIG.STATUS_ADJ_WAITING_ICO) {
         renderItemsEditable(items, isA2A);
         document.getElementById('section-reservasi').style.display = '';
+        // Pre-fill nomor reservasi jika sudah tersimpan di Lark Base
+        var existingReservasi = fieldText(h.fields['Nomor Reservasi']);
+        if (existingReservasi) {
+          document.getElementById('reservasi-input').value = existingReservasi;
+        }
         if (_keterangan === 'Salah Jual Rugi') {
           document.getElementById('section-ba').style.display = '';
           document.getElementById('btn-ba-upload').onclick = function() {
@@ -326,9 +335,12 @@ function doMarkPosted() {
 
 function doReject(reason) {
   setActing(true);
+  var rejectedByName = _currentUser.nickName && _currentUser.nickName !== 'User'
+    ? _currentUser.nickName : (_currentUser.openId || '');
   larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, _recordId, {
     'Status':        CONFIG.STATUS_ADJ_REJECT,
-    'Reject Reason': reason
+    'Reject Reason': reason,
+    'Rejected By':   rejectedByName
   }).then(function() {
     setActing(false);
     showToast('ADJ Rejected.', '#c62828');
