@@ -213,8 +213,9 @@ function loadList() {
 
       _allRecords = mapRecords(visible);
       // Build lookup map for Master Detail join; reset detail cache
+      // Key di-trim untuk guard terhadap whitespace tak terduga
       _headerMap     = {};
-      _allRecords.forEach(function(h) { _headerMap[h.adjNumber] = h; });
+      _allRecords.forEach(function(h) { _headerMap[(h.adjNumber || '').trim()] = h; });
       _detailsLoaded = false;
       _allDetails    = [];
       renderList(_allRecords);
@@ -234,8 +235,13 @@ function loadDetails() {
   show('screen-loading');
   larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_DETAIL_TABLE_ID, null)
     .then(function(records) {
+      var hdrKeys   = Object.keys(_headerMap);
+      var hdrCount  = hdrKeys.length;
+      var rawCount  = records.length;
+
       _allDetails = records.map(function(r) {
-        var adjNum = fieldText(r.fields['ADJ Number']);
+        // Trim adjNum untuk handle whitespace tak terduga dari Lark field
+        var adjNum = (fieldText(r.fields['ADJ Number']) || '').trim();
         var hdr    = _headerMap[adjNum] || {};
         return {
           adjNumber:      adjNum,
@@ -261,6 +267,25 @@ function loadDetails() {
         var allowed = [CONFIG.STATUS_ADJ_NEED_POSTING, CONFIG.STATUS_ADJ_DONE];
         return !!d.site && allowed.indexOf(d.status) !== -1;
       });
+
+      // ── Diagnostic: update pesan empty screen supaya ketahuan root cause ──
+      var emptyEl = document.getElementById('screen-empty').querySelector('p');
+      if (_allDetails.length === 0) {
+        var sampleDetail = rawCount > 0
+          ? '"' + (fieldText(records[0].fields['ADJ Number']) || '').trim() + '"'
+          : '(tidak ada record detail)';
+        var sampleHdr = hdrCount > 0
+          ? '"' + hdrKeys.slice(0, 2).join('", "') + '"'
+          : '(tidak ada ADJ visible untuk role Anda)';
+        emptyEl.textContent =
+          'Tidak ada data Master Detail.' +
+          ' [detail:' + rawCount + ', hdr:' + hdrCount + ']' +
+          ' contoh ADJ detail: ' + sampleDetail +
+          ' | contoh hdr key: ' + sampleHdr;
+      } else {
+        emptyEl.textContent = 'Tidak ada data ADJ.';
+      }
+
       _detailsLoaded = true;
       renderMasterDetail();
     })
