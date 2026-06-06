@@ -94,5 +94,8 @@ function loadList() {
 }
 
 document.getElementById('btn-retry').addEventListener('click', loadList);
-document.addEventListener('visibilitychange', function() { if (!document.hidden) loadList(); });
+document.addEventListener('visibilitychange', (function() {
+  var _t = 0;
+  return function() { if (!document.hidden && Date.now() - _t > 60000) { _t = Date.now(); loadList(); } };
+})());
 loadList();
