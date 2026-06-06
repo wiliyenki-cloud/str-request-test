@@ -31,10 +31,10 @@ function escHtml(str) {
 
 function fmtDate(ms) { if (!ms) return '-'; return new Date(ms).toLocaleDateString('id-ID'); }
 
-function showToast(msg, color) {
+function showToast(msg, color, dur) {
   var t = document.getElementById('toast');
   t.textContent = msg; t.style.background = color || '#333'; t.style.display = '';
-  setTimeout(function() { t.style.display = 'none'; }, 2500);
+  setTimeout(function() { t.style.display = 'none'; }, dur || 2500);
 }
 
 function setActing(val) {
@@ -284,9 +284,9 @@ function doProcessDone() {
   }).then(function() {
     setActing(false);
     showToast('ADJ diproses! → Need Posting by Mgr', '#2e7d32');
-    setTimeout(function() { window.history.back(); }, 1500);
+    setTimeout(function() { window.location.href = '../adj-list/index.html'; }, 1500);
   }).catch(function(err) {
-    showToast('Gagal: ' + (err.message || String(err)), '#c62828');
+    showToast('Gagal: ' + (err.message || String(err)), '#c62828', 5000);
     setActing(false);
   });
 }
@@ -311,9 +311,9 @@ function doMarkPosted() {
   }).then(function() {
     setActing(false);
     showToast('ADJ Done! Posting selesai.', '#2e7d32');
-    setTimeout(function() { window.history.back(); }, 1500);
+    setTimeout(function() { window.location.href = '../adj-list/index.html'; }, 1500);
   }).catch(function(err) {
-    showToast('Gagal: ' + (err.message || String(err)), '#c62828');
+    showToast('Gagal: ' + (err.message || String(err)), '#c62828', 5000);
     setActing(false);
   });
 }
@@ -344,9 +344,9 @@ function doReject(reason) {
   }).then(function() {
     setActing(false);
     showToast('ADJ Rejected.', '#c62828');
-    setTimeout(function() { window.history.back(); }, 1500);
+    setTimeout(function() { window.location.href = '../adj-list/index.html'; }, 1500);
   }).catch(function(err) {
-    showToast('Gagal: ' + (err.message || String(err)), '#c62828');
+    showToast('Gagal: ' + (err.message || String(err)), '#c62828', 5000);
     setActing(false);
   });
 }
