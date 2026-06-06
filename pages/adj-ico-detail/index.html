@@ -57,6 +57,17 @@
       <button class="btn-done"   id="btn-mark-posted">Mark as Posted</button>
     </div>
 
+    <!-- BA Upload iframe modal (bottom sheet) -->
+    <div class="upload-modal" id="upload-modal" style="display:none">
+      <div class="upload-modal-inner">
+        <div class="upload-modal-header">
+          <span class="upload-modal-title">&#128206; Upload BA Salju Rugi</span>
+          <button id="btn-close-upload" class="upload-modal-close">&#10005;</button>
+        </div>
+        <iframe id="upload-iframe" src="" frameborder="0" class="upload-iframe"></iframe>
+      </div>
+    </div>
+
     <!-- Confirmation modal -->
     <div class="modal-overlay" id="confirm-modal" style="display:none">
       <div class="modal-box">
@@ -77,6 +88,6 @@
   <script src="../../utils/auth.js?v=20"></script>
   <script src="../../utils/api.js?v=6"></script>
   <script src="../../utils/debug.js?v=3"></script>
-  <script src="index.js?v=4"></script>
+  <script src="index.js?v=5"></script>
 </body>
 </html>

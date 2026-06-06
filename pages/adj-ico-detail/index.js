@@ -230,9 +230,9 @@ function loadDetail() {
           document.getElementById('btn-ba-upload').onclick = function() {
             var url = CONFIG.GAS_URL +
               '?action=baUploadForm' +
-              '&adjNumber='  + encodeURIComponent(_adjNumber) +
-              '&returnUrl='  + encodeURIComponent(window.location.href);
-            window.location.href = url;
+              '&adjNumber=' + encodeURIComponent(_adjNumber);
+            document.getElementById('upload-iframe').src = url;
+            document.getElementById('upload-modal').style.display = 'flex';
           };
         }
         showFooter('footer-state1');
@@ -361,6 +361,20 @@ document.getElementById('btn-csv').addEventListener('click', function() {
 var _params = getParams();
 _adjNumber  = _params.adj || '';
 document.getElementById('btn-back').addEventListener('click', function() { window.history.back(); });
+
+// ── BA Upload iframe modal ─────────────────────────────────────────────────
+document.getElementById('btn-close-upload').addEventListener('click', function() {
+  document.getElementById('upload-modal').style.display = 'none';
+  document.getElementById('upload-iframe').src = '';
+});
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'BA_UPLOAD_SUCCESS') {
+    document.getElementById('upload-modal').style.display = 'none';
+    document.getElementById('upload-iframe').src = '';
+    showToast('BA berhasil diupload! ✓', '#2e7d32');
+    setTimeout(function() { loadDetail(); }, 800);
+  }
+});
 
 if (!_adjNumber) {
   document.getElementById('err-text').textContent = 'Parameter ADJ tidak ditemukan.';
