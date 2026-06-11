@@ -103,67 +103,30 @@ function renderHeader(h) {
     }).join('');
 }
 
-function renderItemsEditable(items, isA2A) {
+function renderItems(items) {
   _itemsCache = items;
   document.getElementById('items-title').textContent = 'Item List (' + items.length + ')';
-  var thead, tbody;
-  if (isA2A) {
-    thead = '<thead><tr><th>#</th><th>From Art.</th><th>To Art.</th><th>Qty</th><th>Article Doc *</th></tr></thead>';
-    tbody = '<tbody>' + items.map(function(it) {
-      return '<tr data-rid="' + escHtml(it.recordId) + '">' +
-        '<td>' + escHtml(it.seq) + '</td>' +
-        '<td>' + escHtml(it.fromArticle) + '</td>' +
-        '<td>' + escHtml(it.toArticle) + '</td>' +
-        '<td class="num">' + escHtml(String(it.qty)) + '</td>' +
-        '<td><input type="text" class="article-doc-input" placeholder="Doc No." value="' + escHtml(it.articleDoc) + '"></td>' +
-      '</tr>';
-    }).join('') + '</tbody>';
-  } else {
-    thead = '<thead><tr><th>#</th><th>Article</th><th>Qty</th><th>Article Doc *</th></tr></thead>';
-    tbody = '<tbody>' + items.map(function(it) {
-      return '<tr data-rid="' + escHtml(it.recordId) + '">' +
-        '<td>' + escHtml(it.seq) + '</td>' +
-        '<td>' + escHtml(it.fromArticle) + '</td>' +
-        '<td class="num">' + escHtml(String(it.qty)) + '</td>' +
-        '<td><input type="text" class="article-doc-input" placeholder="Doc No." value="' + escHtml(it.articleDoc) + '"></td>' +
-      '</tr>';
-    }).join('') + '</tbody>';
-  }
-  document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
-}
-
-function renderItemsReadonly(items, isA2A) {
-  _itemsCache = items;
-  document.getElementById('items-title').textContent = 'Item List (' + items.length + ')';
-  var thead, tbody;
-  if (isA2A) {
-    thead = '<thead><tr><th>#</th><th>From Art.</th><th>To Art.</th><th>Qty</th><th>Article Doc</th></tr></thead>';
-    tbody = '<tbody>' + items.map(function(it) {
-      return '<tr><td>' + escHtml(it.seq) + '</td><td>' + escHtml(it.fromArticle) +
-        '</td><td>' + escHtml(it.toArticle) + '</td><td class="num">' + escHtml(String(it.qty)) +
-        '</td><td>' + escHtml(it.articleDoc) + '</td></tr>';
-    }).join('') + '</tbody>';
-  } else {
-    thead = '<thead><tr><th>#</th><th>Article</th><th>Qty</th><th>Article Doc</th></tr></thead>';
-    tbody = '<tbody>' + items.map(function(it) {
-      return '<tr><td>' + escHtml(it.seq) + '</td><td>' + escHtml(it.fromArticle) +
-        '</td><td class="num">' + escHtml(String(it.qty)) + '</td><td>' + escHtml(it.articleDoc) + '</td></tr>';
-    }).join('') + '</tbody>';
-  }
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>System</th><th>Fisik</th><th>Disc</th><th>Receipt/Email</th></tr></thead>';
+  var tbody = '<tbody>' + items.map(function(it) {
+    return '<tr>' +
+      '<td>' + escHtml(it.seq) + '</td>' +
+      '<td>' + escHtml(it.article) + '</td>' +
+      '<td>' + escHtml(it.description) + '</td>' +
+      '<td class="num">' + escHtml(String(it.system !== '' ? it.system : '')) + '</td>' +
+      '<td class="num">' + escHtml(String(it.fisik   !== '' ? it.fisik   : '')) + '</td>' +
+      '<td class="num">' + escHtml(String(it.disc    !== '' ? it.disc    : '')) + '</td>' +
+      '<td>' + escHtml(it.receiptEmail) + '</td>' +
+    '</tr>';
+  }).join('') + '</tbody>';
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
 }
 
 function downloadCsv() {
-  var isA2A = _itemsCache.length > 0 && _itemsCache[0].toArticle !== undefined;
-  var BOM = '﻿';
-  var header = isA2A
-    ? 'No,From Article,To Article,Qty,Article Doc\n'
-    : 'No,Article,Qty,Article Doc\n';
-  var rows = _itemsCache.map(function(it) {
+  var BOM    = '﻿';
+  var header = 'No,Article,Description,System,Fisik,Disc,Receipt/Email\n';
+  var rows   = _itemsCache.map(function(it) {
     function c(v) { var s = String(v == null ? '' : v); return s.indexOf(',') !== -1 ? '"' + s.replace(/"/g,'""') + '"' : s; }
-    return isA2A
-      ? [c(it.seq), c(it.fromArticle), c(it.toArticle), c(it.qty), c(it.articleDoc)].join(',')
-      : [c(it.seq), c(it.fromArticle), c(it.qty), c(it.articleDoc)].join(',');
+    return [c(it.seq), c(it.article), c(it.description), c(it.system), c(it.fisik), c(it.disc), c(it.receiptEmail)].join(',');
   }).join('\n');
   var a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(BOM + header + rows);
@@ -186,7 +149,6 @@ function loadDetail() {
     _currentStatus = fieldText(h.fields['Status']);
     _keterangan    = fieldText(h.fields['Keterangan Adjustment']);
     var jenis = fieldText(h.fields['Jenis Adjusment']);
-    var isA2A = jenis === 'Article to Article';
 
     return larkSearch(
       CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_DETAIL_TABLE_ID,
@@ -195,12 +157,14 @@ function loadDetail() {
       details.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
       var items = details.map(function(r) {
         return {
-          recordId:    r.record_id,
-          seq:         fieldText(r.fields['Row Sequence']),
-          fromArticle: fieldText(r.fields['From Article']),
-          toArticle:   fieldText(r.fields['To Article']),
-          qty:         r.fields['Qty'] != null ? r.fields['Qty'] : '',
-          articleDoc:  fieldText(r.fields['Article Doc Adjustment'])
+          recordId:     r.record_id,
+          seq:          fieldText(r.fields['Row Sequence']),
+          article:      fieldText(r.fields['Article']),
+          description:  fieldText(r.fields['Description']),
+          system:       r.fields['System Qty'] != null ? r.fields['System Qty'] : '',
+          fisik:        r.fields['Fisik Qty']  != null ? r.fields['Fisik Qty']  : '',
+          disc:         r.fields['Disc']       != null ? r.fields['Disc']       : '',
+          receiptEmail: fieldText(r.fields['Receipt Email'])
         };
       });
 
@@ -217,10 +181,10 @@ function loadDetail() {
         nomorReservasi: fieldText(h.fields['Nomor Reservasi'])
       });
 
+      renderItems(items);
+
       if (_currentStatus === CONFIG.STATUS_ADJ_WAITING_ICO) {
-        renderItemsEditable(items, isA2A);
         document.getElementById('section-reservasi').style.display = '';
-        // Pre-fill nomor reservasi jika sudah tersimpan di Lark Base
         var existingReservasi = fieldText(h.fields['Nomor Reservasi']);
         if (existingReservasi) {
           document.getElementById('reservasi-input').value = existingReservasi;
@@ -237,11 +201,9 @@ function loadDetail() {
         }
         showFooter('footer-state1');
       } else if (_currentStatus === CONFIG.STATUS_ADJ_NEED_POSTING) {
-        renderItemsReadonly(items, isA2A);
         document.getElementById('section-approvedby').style.display = '';
         showFooter('footer-state2');
       } else {
-        renderItemsReadonly(items, isA2A);
         showFooter(null);
       }
       show('screen-content');
@@ -266,21 +228,10 @@ document.getElementById('btn-process-done').addEventListener('click', function()
 function doProcessDone() {
   var reservasi = document.getElementById('reservasi-input').value.trim();
   setActing(true);
-  var rows  = Array.prototype.slice.call(document.querySelectorAll('#items-table tbody tr[data-rid]'));
-  var chain = rows.reduce(function(p, row) {
-    return p.then(function() {
-      var docVal = row.querySelector('.article-doc-input').value.trim();
-      return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_DETAIL_TABLE_ID, row.dataset.rid, {
-        'Article Doc Adjustment': docVal
-      });
-    });
-  }, Promise.resolve());
-  chain.then(function() {
-    return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, _recordId, {
-      'Status':           CONFIG.STATUS_ADJ_NEED_POSTING,
-      'Nomor Reservasi':  reservasi,
-      'ICO Process Date': Date.now()
-    });
+  larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, _recordId, {
+    'Status':           CONFIG.STATUS_ADJ_NEED_POSTING,
+    'Nomor Reservasi':  reservasi,
+    'ICO Process Date': Date.now()
   }).then(function() {
     setActing(false);
     showToast('ADJ diproses! → Need Posting by Mgr', '#2e7d32');

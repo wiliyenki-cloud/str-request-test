@@ -257,10 +257,12 @@ function loadDetails() {
           nomorReservasi: hdr.nomorReservasi || '',
           approvedBy:     hdr.approvedBy     || '',
           icoProcessDate: hdr.icoProcessDate || '-',
-          fromArticle:    fieldText(r.fields['From Article']),
-          toArticle:      fieldText(r.fields['To Article']),
-          qty:            r.fields['Qty'] != null ? r.fields['Qty'] : '',
-          articleDoc:     fieldText(r.fields['Article Doc Adjustment'])
+          article:        fieldText(r.fields['Article']),
+          description:    fieldText(r.fields['Description']),
+          system:         r.fields['System Qty'] != null ? r.fields['System Qty'] : '',
+          fisik:          r.fields['Fisik Qty']  != null ? r.fields['Fisik Qty']  : '',
+          disc:           r.fields['Disc']       != null ? r.fields['Disc']       : '',
+          receiptEmail:   fieldText(r.fields['Receipt Email'])
         };
       }).filter(function(d) {
         // Hanya baris yang header-nya visible (punya site) + status Need Posting / Done
@@ -300,10 +302,11 @@ function filterDetails() {
   if (_searchText) {
     var q = _searchText.toLowerCase();
     result = result.filter(function(d) {
-      return (d.adjNumber      && d.adjNumber.toLowerCase().indexOf(q)      !== -1) ||
-             (d.fromArticle    && d.fromArticle.toLowerCase().indexOf(q)    !== -1) ||
-             (d.toArticle      && d.toArticle.toLowerCase().indexOf(q)      !== -1) ||
-             (d.requestedBy    && d.requestedBy.toLowerCase().indexOf(q)    !== -1) ||
+      return (d.adjNumber    && d.adjNumber.toLowerCase().indexOf(q)    !== -1) ||
+             (d.article      && d.article.toLowerCase().indexOf(q)      !== -1) ||
+             (d.description  && d.description.toLowerCase().indexOf(q)  !== -1) ||
+             (d.receiptEmail && d.receiptEmail.toLowerCase().indexOf(q) !== -1) ||
+             (d.requestedBy  && d.requestedBy.toLowerCase().indexOf(q)  !== -1) ||
              (d.nomorReservasi && d.nomorReservasi.toLowerCase().indexOf(q) !== -1);
     });
   }
@@ -320,8 +323,8 @@ function filterDetails() {
 
 function exportCSV(data) {
   var cols = ['ADJ Number','Site','Dept','Jenis','Keterangan','Status','No Reservasi',
-              'From Article','To Article','Qty','Article Doc','Requester','Submit Date',
-              'ICO Process Date','Approved By'];
+              'Article','Description','System','Fisik','Disc','Receipt/Email',
+              'Requester','Submit Date','ICO Process Date','Approved By'];
   var rows = [cols.join(',')];
   data.forEach(function(d) {
     rows.push([
@@ -332,10 +335,12 @@ function exportCSV(data) {
       '"' + String(d.keterangan).replace(/"/g,'""')     + '"',
       '"' + String(d.status).replace(/"/g,'""')         + '"',
       '"' + String(d.nomorReservasi).replace(/"/g,'""') + '"',
-      '"' + String(d.fromArticle).replace(/"/g,'""')    + '"',
-      '"' + String(d.toArticle).replace(/"/g,'""')      + '"',
-      String(d.qty),
-      '"' + String(d.articleDoc).replace(/"/g,'""')     + '"',
+      '"' + String(d.article).replace(/"/g,'""')        + '"',
+      '"' + String(d.description).replace(/"/g,'""')    + '"',
+      String(d.system !== '' ? d.system : ''),
+      String(d.fisik  !== '' ? d.fisik  : ''),
+      String(d.disc   !== '' ? d.disc   : ''),
+      '"' + String(d.receiptEmail).replace(/"/g,'""')   + '"',
       '"' + String(d.requestedBy).replace(/"/g,'""')    + '"',
       '"' + String(d.submitDate).replace(/"/g,'""')     + '"',
       '"' + String(d.icoProcessDate).replace(/"/g,'""') + '"',
@@ -372,20 +377,22 @@ function renderMasterDetail() {
   var tbl = '<div class="tbl-wrap"><table class="str-table">' +
     '<thead><tr>' +
       '<th>ADJ Number</th><th>Site</th><th>Status</th>' +
-      '<th>From Article</th><th>To Article</th><th>Qty</th>' +
-      '<th>No Reservasi</th><th>Article Doc</th><th>Submit</th>' +
+      '<th>Article</th><th>Description</th><th>System</th><th>Fisik</th><th>Disc</th>' +
+      '<th>Receipt/Email</th><th>No Reservasi</th><th>Submit</th>' +
     '</tr></thead><tbody>' +
     pageData.map(function(d) {
       return '<tr>' +
-        '<td style="font-weight:700;color:#1565c0;">' + escHtml(d.adjNumber)       + '</td>' +
-        '<td>' + escHtml(d.site)                                                    + '</td>' +
+        '<td style="font-weight:700;color:#1565c0;">' + escHtml(d.adjNumber) + '</td>' +
+        '<td>' + escHtml(d.site) + '</td>' +
         '<td><span class="badge ' + statusBadgeClass(d.status) + '">' + escHtml(d.status) + '</span></td>' +
-        '<td>' + escHtml(d.fromArticle)                                             + '</td>' +
-        '<td>' + escHtml(d.toArticle)                                               + '</td>' +
-        '<td class="num">' + escHtml(String(d.qty))                                 + '</td>' +
-        '<td>' + escHtml(d.nomorReservasi)                                          + '</td>' +
-        '<td>' + escHtml(d.articleDoc)                                              + '</td>' +
-        '<td>' + escHtml(d.submitDate)                                              + '</td>' +
+        '<td>' + escHtml(d.article) + '</td>' +
+        '<td>' + escHtml(d.description) + '</td>' +
+        '<td class="num">' + escHtml(String(d.system !== '' ? d.system : '')) + '</td>' +
+        '<td class="num">' + escHtml(String(d.fisik  !== '' ? d.fisik  : '')) + '</td>' +
+        '<td class="num">' + escHtml(String(d.disc   !== '' ? d.disc   : '')) + '</td>' +
+        '<td>' + escHtml(d.receiptEmail) + '</td>' +
+        '<td>' + escHtml(d.nomorReservasi) + '</td>' +
+        '<td>' + escHtml(d.submitDate) + '</td>' +
       '</tr>';
     }).join('') +
     '</tbody></table></div>';

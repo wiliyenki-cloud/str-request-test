@@ -44,28 +44,20 @@ function renderHeader(h) {
     }).join('');
 }
 
-function renderItems(items, jenis) {
-  var isA2A = jenis === 'Article to Article';
+function renderItems(items) {
   document.getElementById('items-title').textContent = 'Item List (' + items.length + ')';
-  var thead, tbody;
-  if (isA2A) {
-    thead = '<thead><tr><th>#</th><th>From Article</th><th>To Article</th><th>Qty</th><th>Article Doc</th></tr></thead>';
-    tbody = '<tbody>' + items.map(function(it) {
-      return '<tr><td>' + escHtml(it.seq) + '</td>' +
-        '<td>' + escHtml(it.fromArticle) + '</td>' +
-        '<td>' + escHtml(it.toArticle) + '</td>' +
-        '<td class="num">' + escHtml(String(it.qty)) + '</td>' +
-        '<td>' + escHtml(it.articleDoc) + '</td></tr>';
-    }).join('') + '</tbody>';
-  } else {
-    thead = '<thead><tr><th>#</th><th>Article</th><th>Qty</th><th>Article Doc</th></tr></thead>';
-    tbody = '<tbody>' + items.map(function(it) {
-      return '<tr><td>' + escHtml(it.seq) + '</td>' +
-        '<td>' + escHtml(it.fromArticle) + '</td>' +
-        '<td class="num">' + escHtml(String(it.qty)) + '</td>' +
-        '<td>' + escHtml(it.articleDoc) + '</td></tr>';
-    }).join('') + '</tbody>';
-  }
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>System</th><th>Fisik</th><th>Disc</th><th>Receipt/Email</th></tr></thead>';
+  var tbody = '<tbody>' + items.map(function(it) {
+    return '<tr>' +
+      '<td>' + escHtml(it.seq) + '</td>' +
+      '<td>' + escHtml(it.article) + '</td>' +
+      '<td>' + escHtml(it.description) + '</td>' +
+      '<td class="num">' + escHtml(String(it.system !== '' ? it.system : '')) + '</td>' +
+      '<td class="num">' + escHtml(String(it.fisik   !== '' ? it.fisik   : '')) + '</td>' +
+      '<td class="num">' + escHtml(String(it.disc    !== '' ? it.disc    : '')) + '</td>' +
+      '<td>' + escHtml(it.receiptEmail) + '</td>' +
+    '</tr>';
+  }).join('') + '</tbody>';
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
 }
 
@@ -76,8 +68,7 @@ function loadDetail() {
     { conjunction: 'and', conditions: [{ field_name: 'ADJ Number', operator: 'is', value: [_adjNumber] }] }
   ).then(function(headers) {
     if (headers.length === 0) throw new Error('ADJ tidak ditemukan');
-    var h     = headers[0];
-    var jenis = fieldText(h.fields['Jenis Adjusment']);
+    var h = headers[0];
 
     return larkSearch(
       CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_DETAIL_TABLE_ID,
@@ -90,7 +81,7 @@ function loadDetail() {
         site:           fieldText(h.fields['Site']),
         siteName:       fieldText(h.fields['Site Name']),
         department:     fieldText(h.fields['Department']),
-        jenis:          jenis,
+        jenis:          fieldText(h.fields['Jenis Adjusment']),
         keterangan:     fieldText(h.fields['Keterangan Adjustment']),
         status:         fieldText(h.fields['Status']),
         requestedBy:    fieldText(h.fields['Requested By']),
@@ -102,13 +93,15 @@ function loadDetail() {
 
       renderItems(details.map(function(r) {
         return {
-          seq:         fieldText(r.fields['Row Sequence']),
-          fromArticle: fieldText(r.fields['From Article']),
-          toArticle:   fieldText(r.fields['To Article']),
-          qty:         r.fields['Qty'] != null ? r.fields['Qty'] : '',
-          articleDoc:  fieldText(r.fields['Article Doc Adjustment'])
+          seq:          fieldText(r.fields['Row Sequence']),
+          article:      fieldText(r.fields['Article']),
+          description:  fieldText(r.fields['Description']),
+          system:       r.fields['System Qty'] != null ? r.fields['System Qty'] : '',
+          fisik:        r.fields['Fisik Qty']  != null ? r.fields['Fisik Qty']  : '',
+          disc:         r.fields['Disc']       != null ? r.fields['Disc']       : '',
+          receiptEmail: fieldText(r.fields['Receipt Email'])
         };
-      }), jenis);
+      }));
 
       show('screen-content');
     });

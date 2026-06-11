@@ -104,16 +104,17 @@ function buildRows(headers, details) {
     };
     var dets = byAdj[num] || [];
     if (dets.length === 0) {
-      // header tanpa detail — tetap tampilkan 1 baris kosong agar terlihat di laporan
-      rows.push(merge(common, { fromArticle: '', toArticle: '', qty: '', articleDoc: '' }));
+      rows.push(merge(common, { article: '', description: '', system: '', fisik: '', disc: '', receiptEmail: '' }));
       return;
     }
     dets.forEach(function(d) {
       rows.push(merge(common, {
-        fromArticle: fieldText(d.fields['From Article']),
-        toArticle:   fieldText(d.fields['To Article']),
-        qty:         d.fields['Qty'] != null ? d.fields['Qty'] : '',
-        articleDoc:  fieldText(d.fields['Article Doc Adjustment'])
+        article:      fieldText(d.fields['Article']),
+        description:  fieldText(d.fields['Description']),
+        system:       d.fields['System Qty'] != null ? d.fields['System Qty'] : '',
+        fisik:        d.fields['Fisik Qty']  != null ? d.fields['Fisik Qty']  : '',
+        disc:         d.fields['Disc']       != null ? d.fields['Disc']       : '',
+        receiptEmail: fieldText(d.fields['Receipt Email'])
       }));
     });
   });
@@ -191,10 +192,11 @@ function applyFilters(rows) {
   if (_searchText) {
     var q = _searchText.toLowerCase();
     result = result.filter(function(r) {
-      return (r.adjNumber   && r.adjNumber.toLowerCase().indexOf(q)   !== -1) ||
-             (r.fromArticle && r.fromArticle.toLowerCase().indexOf(q) !== -1) ||
-             (r.toArticle   && r.toArticle.toLowerCase().indexOf(q)   !== -1) ||
-             (r.requestedBy && r.requestedBy.toLowerCase().indexOf(q) !== -1) ||
+      return (r.adjNumber    && r.adjNumber.toLowerCase().indexOf(q)    !== -1) ||
+             (r.article      && r.article.toLowerCase().indexOf(q)      !== -1) ||
+             (r.description  && r.description.toLowerCase().indexOf(q)  !== -1) ||
+             (r.receiptEmail && r.receiptEmail.toLowerCase().indexOf(q) !== -1) ||
+             (r.requestedBy  && r.requestedBy.toLowerCase().indexOf(q)  !== -1) ||
              (r.nomorReservasi && r.nomorReservasi.toLowerCase().indexOf(q) !== -1);
     });
   }
@@ -215,19 +217,22 @@ function render() {
   if (rows.length === 0) { show('screen-empty'); return; }
 
   var thead = '<thead><tr>' +
-    '<th>ADJ Number</th><th>Site</th><th>From Art.</th><th>To Art.</th><th>Qty</th>' +
-    '<th>Status</th><th>No Reservasi</th><th>Article Doc</th><th>Submit</th>' +
+    '<th>ADJ Number</th><th>Site</th><th>Article</th><th>Description</th>' +
+    '<th>System</th><th>Fisik</th><th>Disc</th><th>Receipt/Email</th>' +
+    '<th>Status</th><th>No Reservasi</th><th>Submit</th>' +
     '</tr></thead>';
   var tbody = '<tbody>' + rows.map(function(r) {
     return '<tr>' +
       '<td class="adj-cell">' + escHtml(r.adjNumber) + '</td>' +
       '<td>' + escHtml(r.site) + '</td>' +
-      '<td>' + escHtml(r.fromArticle) + '</td>' +
-      '<td>' + escHtml(r.toArticle) + '</td>' +
-      '<td class="num">' + escHtml(String(r.qty)) + '</td>' +
+      '<td>' + escHtml(r.article) + '</td>' +
+      '<td>' + escHtml(r.description) + '</td>' +
+      '<td class="num">' + escHtml(String(r.system !== '' ? r.system : '')) + '</td>' +
+      '<td class="num">' + escHtml(String(r.fisik   !== '' ? r.fisik   : '')) + '</td>' +
+      '<td class="num">' + escHtml(String(r.disc    !== '' ? r.disc    : '')) + '</td>' +
+      '<td>' + escHtml(r.receiptEmail) + '</td>' +
       '<td><span class="badge ' + statusBadgeClass(r.status) + '">' + escHtml(r.status) + '</span></td>' +
       '<td>' + escHtml(r.nomorReservasi) + '</td>' +
-      '<td>' + escHtml(r.articleDoc) + '</td>' +
       '<td>' + escHtml(r.submitDate) + '</td>' +
     '</tr>';
   }).join('') + '</tbody>';
@@ -247,14 +252,14 @@ function downloadHistory() {
   var BOM = '﻿';
   var header = ['ADJ Number','Site','Site Name','Department','Jenis Adjustment','Keterangan',
                 'Status','No Reservasi','Requested By','Submit Date','ICO Process Date',
-                'From Article','To Article','Qty','Article Doc','Approved By'].join(',') + '\n';
+                'Article','Description','System','Fisik','Disc','Receipt/Email','Approved By'].join(',') + '\n';
   var body = rows.map(function(r) {
     return [
       csvCell(r.adjNumber), csvCell(r.site), csvCell(r.siteName), csvCell(r.department),
       csvCell(r.jenis), csvCell(r.keterangan), csvCell(r.status), csvCell(r.nomorReservasi),
       csvCell(r.requestedBy), csvCell(r.submitDate), csvCell(r.icoProcessDate),
-      csvCell(r.fromArticle), csvCell(r.toArticle), csvCell(r.qty), csvCell(r.articleDoc),
-      csvCell(r.approvedBy)
+      csvCell(r.article), csvCell(r.description), csvCell(r.system), csvCell(r.fisik),
+      csvCell(r.disc), csvCell(r.receiptEmail), csvCell(r.approvedBy)
     ].join(',');
   }).join('\n');
 
