@@ -104,7 +104,7 @@ function buildRows(headers, details) {
     };
     var dets = byAdj[num] || [];
     if (dets.length === 0) {
-      rows.push(merge(common, { article: '', description: '', system: '', fisik: '', disc: '', receiptEmail: '' }));
+      rows.push(merge(common, { article: '', description: '', system: '', fisik: '', disc: '', receiptEmail: '', articleDoc: '' }));
       return;
     }
     dets.forEach(function(d) {
@@ -114,7 +114,8 @@ function buildRows(headers, details) {
         system:       d.fields['System Qty'] != null ? d.fields['System Qty'] : '',
         fisik:        d.fields['Fisik Qty']  != null ? d.fields['Fisik Qty']  : '',
         disc:         d.fields['Disc']       != null ? d.fields['Disc']       : '',
-        receiptEmail: fieldText(d.fields['Receipt Email'])
+        receiptEmail: fieldText(d.fields['Receipt Email']),
+        articleDoc:   fieldText(d.fields['Article Doc Adjustment'])
       }));
     });
   });
@@ -218,7 +219,7 @@ function render() {
 
   var thead = '<thead><tr>' +
     '<th>ADJ Number</th><th>Site</th><th>Article</th><th>Description</th>' +
-    '<th>System</th><th>Fisik</th><th>Disc</th><th>Receipt/Email</th>' +
+    '<th>System</th><th>Fisik</th><th>Disc</th><th>Receipt/Email</th><th>Article Doc</th>' +
     '<th>Status</th><th>No Reservasi</th><th>Submit</th>' +
     '</tr></thead>';
   var tbody = '<tbody>' + rows.map(function(r) {
@@ -231,6 +232,7 @@ function render() {
       '<td class="num">' + escHtml(String(r.fisik   !== '' ? r.fisik   : '')) + '</td>' +
       '<td class="num">' + escHtml(String(r.disc    !== '' ? r.disc    : '')) + '</td>' +
       '<td>' + escHtml(r.receiptEmail) + '</td>' +
+      '<td>' + escHtml(r.articleDoc) + '</td>' +
       '<td><span class="badge ' + statusBadgeClass(r.status) + '">' + escHtml(r.status) + '</span></td>' +
       '<td>' + escHtml(r.nomorReservasi) + '</td>' +
       '<td>' + escHtml(r.submitDate) + '</td>' +
@@ -252,14 +254,14 @@ function downloadHistory() {
   var BOM = '﻿';
   var header = ['ADJ Number','Site','Site Name','Department','Jenis Adjustment','Keterangan',
                 'Status','No Reservasi','Requested By','Submit Date','ICO Process Date',
-                'Article','Description','System','Fisik','Disc','Receipt/Email','Approved By'].join(',') + '\n';
+                'Article','Description','System','Fisik','Disc','Receipt/Email','Article Doc','Approved By'].join(',') + '\n';
   var body = rows.map(function(r) {
     return [
       csvCell(r.adjNumber), csvCell(r.site), csvCell(r.siteName), csvCell(r.department),
       csvCell(r.jenis), csvCell(r.keterangan), csvCell(r.status), csvCell(r.nomorReservasi),
       csvCell(r.requestedBy), csvCell(r.submitDate), csvCell(r.icoProcessDate),
       csvCell(r.article), csvCell(r.description), csvCell(r.system), csvCell(r.fisik),
-      csvCell(r.disc), csvCell(r.receiptEmail), csvCell(r.approvedBy)
+      csvCell(r.disc), csvCell(r.receiptEmail), csvCell(r.articleDoc), csvCell(r.approvedBy)
     ].join(',');
   }).join('\n');
 

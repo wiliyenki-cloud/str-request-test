@@ -262,7 +262,8 @@ function loadDetails() {
           system:         r.fields['System Qty'] != null ? r.fields['System Qty'] : '',
           fisik:          r.fields['Fisik Qty']  != null ? r.fields['Fisik Qty']  : '',
           disc:           r.fields['Disc']       != null ? r.fields['Disc']       : '',
-          receiptEmail:   fieldText(r.fields['Receipt Email'])
+          receiptEmail:   fieldText(r.fields['Receipt Email']),
+          articleDoc:     fieldText(r.fields['Article Doc Adjustment'])
         };
       }).filter(function(d) {
         // Hanya baris yang header-nya visible (punya site) + status Need Posting / Done
@@ -323,7 +324,7 @@ function filterDetails() {
 
 function exportCSV(data) {
   var cols = ['ADJ Number','Site','Dept','Jenis','Keterangan','Status','No Reservasi',
-              'Article','Description','System','Fisik','Disc','Receipt/Email',
+              'Article','Description','System','Fisik','Disc','Receipt/Email','Article Doc',
               'Requester','Submit Date','ICO Process Date','Approved By'];
   var rows = [cols.join(',')];
   data.forEach(function(d) {
@@ -341,6 +342,7 @@ function exportCSV(data) {
       String(d.fisik  !== '' ? d.fisik  : ''),
       String(d.disc   !== '' ? d.disc   : ''),
       '"' + String(d.receiptEmail).replace(/"/g,'""')   + '"',
+      '"' + String(d.articleDoc).replace(/"/g,'""')     + '"',
       '"' + String(d.requestedBy).replace(/"/g,'""')    + '"',
       '"' + String(d.submitDate).replace(/"/g,'""')     + '"',
       '"' + String(d.icoProcessDate).replace(/"/g,'""') + '"',
@@ -378,7 +380,7 @@ function renderMasterDetail() {
     '<thead><tr>' +
       '<th>ADJ Number</th><th>Site</th><th>Status</th>' +
       '<th>Article</th><th>Description</th><th>System</th><th>Fisik</th><th>Disc</th>' +
-      '<th>Receipt/Email</th><th>No Reservasi</th><th>Submit</th>' +
+      '<th>Receipt/Email</th><th>Article Doc</th><th>No Reservasi</th><th>Submit</th>' +
     '</tr></thead><tbody>' +
     pageData.map(function(d) {
       return '<tr>' +
@@ -391,6 +393,7 @@ function renderMasterDetail() {
         '<td class="num">' + escHtml(String(d.fisik  !== '' ? d.fisik  : '')) + '</td>' +
         '<td class="num">' + escHtml(String(d.disc   !== '' ? d.disc   : '')) + '</td>' +
         '<td>' + escHtml(d.receiptEmail) + '</td>' +
+        '<td>' + escHtml(d.articleDoc) + '</td>' +
         '<td>' + escHtml(d.nomorReservasi) + '</td>' +
         '<td>' + escHtml(d.submitDate) + '</td>' +
       '</tr>';

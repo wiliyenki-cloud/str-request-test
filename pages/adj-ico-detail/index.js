@@ -103,10 +103,29 @@ function renderHeader(h) {
     }).join('');
 }
 
-function renderItems(items) {
+function renderItemsEditable(items) {
   _itemsCache = items;
   document.getElementById('items-title').textContent = 'Item List (' + items.length + ')';
-  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>System</th><th>Fisik</th><th>Disc</th><th>Receipt/Email</th></tr></thead>';
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>System</th><th>Fisik</th><th>Disc</th><th>Receipt/Email</th><th>Article Doc *</th></tr></thead>';
+  var tbody = '<tbody>' + items.map(function(it) {
+    return '<tr data-rid="' + escHtml(it.recordId) + '">' +
+      '<td>' + escHtml(it.seq) + '</td>' +
+      '<td>' + escHtml(it.article) + '</td>' +
+      '<td>' + escHtml(it.description) + '</td>' +
+      '<td class="num">' + escHtml(String(it.system !== '' ? it.system : '')) + '</td>' +
+      '<td class="num">' + escHtml(String(it.fisik   !== '' ? it.fisik   : '')) + '</td>' +
+      '<td class="num">' + escHtml(String(it.disc    !== '' ? it.disc    : '')) + '</td>' +
+      '<td>' + escHtml(it.receiptEmail) + '</td>' +
+      '<td><input type="text" class="article-doc-input" placeholder="Doc No." value="' + escHtml(it.articleDoc) + '"></td>' +
+    '</tr>';
+  }).join('') + '</tbody>';
+  document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
+}
+
+function renderItemsReadonly(items) {
+  _itemsCache = items;
+  document.getElementById('items-title').textContent = 'Item List (' + items.length + ')';
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>System</th><th>Fisik</th><th>Disc</th><th>Receipt/Email</th><th>Article Doc</th></tr></thead>';
   var tbody = '<tbody>' + items.map(function(it) {
     return '<tr>' +
       '<td>' + escHtml(it.seq) + '</td>' +
@@ -116,6 +135,7 @@ function renderItems(items) {
       '<td class="num">' + escHtml(String(it.fisik   !== '' ? it.fisik   : '')) + '</td>' +
       '<td class="num">' + escHtml(String(it.disc    !== '' ? it.disc    : '')) + '</td>' +
       '<td>' + escHtml(it.receiptEmail) + '</td>' +
+      '<td>' + escHtml(it.articleDoc) + '</td>' +
     '</tr>';
   }).join('') + '</tbody>';
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
@@ -123,10 +143,10 @@ function renderItems(items) {
 
 function downloadCsv() {
   var BOM    = '﻿';
-  var header = 'No,Article,Description,System,Fisik,Disc,Receipt/Email\n';
+  var header = 'No,Article,Description,System,Fisik,Disc,Receipt/Email,Article Doc\n';
   var rows   = _itemsCache.map(function(it) {
     function c(v) { var s = String(v == null ? '' : v); return s.indexOf(',') !== -1 ? '"' + s.replace(/"/g,'""') + '"' : s; }
-    return [c(it.seq), c(it.article), c(it.description), c(it.system), c(it.fisik), c(it.disc), c(it.receiptEmail)].join(',');
+    return [c(it.seq), c(it.article), c(it.description), c(it.system), c(it.fisik), c(it.disc), c(it.receiptEmail), c(it.articleDoc)].join(',');
   }).join('\n');
   var a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(BOM + header + rows);
@@ -164,7 +184,8 @@ function loadDetail() {
           system:       r.fields['System Qty'] != null ? r.fields['System Qty'] : '',
           fisik:        r.fields['Fisik Qty']  != null ? r.fields['Fisik Qty']  : '',
           disc:         r.fields['Disc']       != null ? r.fields['Disc']       : '',
-          receiptEmail: fieldText(r.fields['Receipt Email'])
+          receiptEmail: fieldText(r.fields['Receipt Email']),
+          articleDoc:   fieldText(r.fields['Article Doc Adjustment'])
         };
       });
 
@@ -181,9 +202,8 @@ function loadDetail() {
         nomorReservasi: fieldText(h.fields['Nomor Reservasi'])
       });
 
-      renderItems(items);
-
       if (_currentStatus === CONFIG.STATUS_ADJ_WAITING_ICO) {
+        renderItemsEditable(items);
         document.getElementById('section-reservasi').style.display = '';
         var existingReservasi = fieldText(h.fields['Nomor Reservasi']);
         if (existingReservasi) {
@@ -201,9 +221,11 @@ function loadDetail() {
         }
         showFooter('footer-state1');
       } else if (_currentStatus === CONFIG.STATUS_ADJ_NEED_POSTING) {
+        renderItemsReadonly(items);
         document.getElementById('section-approvedby').style.display = '';
         showFooter('footer-state2');
       } else {
+        renderItemsReadonly(items);
         showFooter(null);
       }
       show('screen-content');
@@ -228,10 +250,21 @@ document.getElementById('btn-process-done').addEventListener('click', function()
 function doProcessDone() {
   var reservasi = document.getElementById('reservasi-input').value.trim();
   setActing(true);
-  larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, _recordId, {
-    'Status':           CONFIG.STATUS_ADJ_NEED_POSTING,
-    'Nomor Reservasi':  reservasi,
-    'ICO Process Date': Date.now()
+  var rows  = Array.prototype.slice.call(document.querySelectorAll('#items-table tbody tr[data-rid]'));
+  var chain = rows.reduce(function(p, row) {
+    return p.then(function() {
+      var docVal = row.querySelector('.article-doc-input').value.trim();
+      return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_DETAIL_TABLE_ID, row.dataset.rid, {
+        'Article Doc Adjustment': docVal
+      });
+    });
+  }, Promise.resolve());
+  chain.then(function() {
+    return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, _recordId, {
+      'Status':           CONFIG.STATUS_ADJ_NEED_POSTING,
+      'Nomor Reservasi':  reservasi,
+      'ICO Process Date': Date.now()
+    });
   }).then(function() {
     setActing(false);
     showToast('ADJ diproses! → Need Posting by Mgr', '#2e7d32');

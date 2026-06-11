@@ -32,8 +32,9 @@ var CONFIG = {
   API_BASE: 'https://open.larksuite.com',
 
   // ADJ Centralization (same STR_BASE_APP_TOKEN, tabel baru)
-  ADJ_HEADER_TABLE_ID: 'tblFGno3ONx4BseJ',
-  ADJ_DETAIL_TABLE_ID: 'tblUShPPgJW3fqBn',
+  ADJ_HEADER_TABLE_ID:  'tblFGno3ONx4BseJ',
+  ADJ_DETAIL_TABLE_ID:  'tblUShPPgJW3fqBn',
+  ARTICLE_TABLE_ID:     'tblewhldJCfMUQHF',
 
   // ADJ Status values (exact strings matching Lark Base Single Select options)
   STATUS_ADJ_WAITING_ICO:  'Waiting Create by ICO',

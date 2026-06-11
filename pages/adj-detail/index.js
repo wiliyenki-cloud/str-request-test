@@ -46,7 +46,7 @@ function renderHeader(h) {
 
 function renderItems(items) {
   document.getElementById('items-title').textContent = 'Item List (' + items.length + ')';
-  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>System</th><th>Fisik</th><th>Disc</th><th>Receipt/Email</th></tr></thead>';
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>System</th><th>Fisik</th><th>Disc</th><th>Receipt/Email</th><th>Article Doc</th></tr></thead>';
   var tbody = '<tbody>' + items.map(function(it) {
     return '<tr>' +
       '<td>' + escHtml(it.seq) + '</td>' +
@@ -56,6 +56,7 @@ function renderItems(items) {
       '<td class="num">' + escHtml(String(it.fisik   !== '' ? it.fisik   : '')) + '</td>' +
       '<td class="num">' + escHtml(String(it.disc    !== '' ? it.disc    : '')) + '</td>' +
       '<td>' + escHtml(it.receiptEmail) + '</td>' +
+      '<td>' + escHtml(it.articleDoc) + '</td>' +
     '</tr>';
   }).join('') + '</tbody>';
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
@@ -99,7 +100,8 @@ function loadDetail() {
           system:       r.fields['System Qty'] != null ? r.fields['System Qty'] : '',
           fisik:        r.fields['Fisik Qty']  != null ? r.fields['Fisik Qty']  : '',
           disc:         r.fields['Disc']       != null ? r.fields['Disc']       : '',
-          receiptEmail: fieldText(r.fields['Receipt Email'])
+          receiptEmail: fieldText(r.fields['Receipt Email']),
+          articleDoc:   fieldText(r.fields['Article Doc Adjustment'])
         };
       }));
 
