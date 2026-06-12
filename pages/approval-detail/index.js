@@ -64,7 +64,7 @@ function renderHeader(h) {
 function renderItems(items) {
   _detailItems = items;
   document.getElementById('items-title').textContent = 'Item List (' + items.length + ')';
-  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>Stock</th><th>Sales</th><th>Req Qty</th><th>Apv Qty</th><th>Reason</th></tr></thead>';
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th class="num">Stock</th><th class="num">Sales</th><th class="num">Req Qty</th><th class="num">Apv Qty</th><th>Reason</th></tr></thead>';
   var tbody = '<tbody>' + items.map(function(it) {
     return '<tr data-rid="' + escHtml(it.recordId) + '">' +
       '<td>' + escHtml(it.seq) + '</td>' +
