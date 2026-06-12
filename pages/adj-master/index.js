@@ -1,4 +1,4 @@
-// ADJ Master Detail — flat per-article report of ICO-created ADJ (Need Posting + Done).
+// ADJ Master Detail — flat per-article report of ICO-created ADJ (Done).
 // Role-filtered by site (ICO sees their sites, Manager sees their sites, no-role → empty).
 // Download = CSV per-article of currently filtered rows.
 
@@ -52,9 +52,8 @@ function dayEndMs(ds) {
 }
 
 function statusBadgeClass(status) {
-  if (status === CONFIG.STATUS_ADJ_NEED_POSTING) return 'badge-need-posting';
-  if (status === CONFIG.STATUS_ADJ_DONE)         return 'badge-done';
-  return 'badge-need-posting';
+  if (status === CONFIG.STATUS_ADJ_DONE) return 'badge-done';
+  return 'badge-done';
 }
 
 function buildIcoMap(icoRecords) {
@@ -137,8 +136,8 @@ function loadData() {
       var headers = res[0], details = res[1], icoRecords = res[2], siteRecords = res[3];
       _icoMap = buildIcoMap(icoRecords);
 
-      // Status filter: hanya yang sudah di-create ICO ke atas (Need Posting + Done)
-      var allowedStatus = [CONFIG.STATUS_ADJ_NEED_POSTING, CONFIG.STATUS_ADJ_DONE];
+      // Status filter: hanya Done (flow baru: ICO langsung Done, skip Need Posting)
+      var allowedStatus = [CONFIG.STATUS_ADJ_DONE];
       headers = headers.filter(function(h) {
         return allowedStatus.indexOf(fieldText(h.fields['Status'])) !== -1;
       });
@@ -187,7 +186,7 @@ function loadData() {
 function applyFilters(rows) {
   var result = rows;
   if (_activeFilter !== 'all') {
-    var map = { 'need-posting': CONFIG.STATUS_ADJ_NEED_POSTING, 'done': CONFIG.STATUS_ADJ_DONE };
+    var map = { 'done': CONFIG.STATUS_ADJ_DONE };
     result = result.filter(function(r) { return r.status === map[_activeFilter]; });
   }
   if (_searchText) {

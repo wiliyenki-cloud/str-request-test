@@ -220,10 +220,6 @@ function loadDetail() {
           };
         }
         showFooter('footer-state1');
-      } else if (_currentStatus === CONFIG.STATUS_ADJ_NEED_POSTING) {
-        renderItemsReadonly(items);
-        document.getElementById('section-approvedby').style.display = '';
-        showFooter('footer-state2');
       } else {
         renderItemsReadonly(items);
         showFooter(null);
@@ -261,13 +257,13 @@ function doProcessDone() {
   }, Promise.resolve());
   chain.then(function() {
     return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, _recordId, {
-      'Status':           CONFIG.STATUS_ADJ_NEED_POSTING,
+      'Status':           CONFIG.STATUS_ADJ_DONE,
       'Nomor Reservasi':  reservasi,
       'ICO Process Date': Date.now()
     });
   }).then(function() {
     setActing(false);
-    showToast('ADJ diproses! → Need Posting by Mgr', '#2e7d32');
+    showToast('ADJ berhasil diproses!', '#2e7d32');
     setTimeout(function() { window.location.href = '../adj-list/index.html'; }, 1500);
   }).catch(function(err) {
     showToast('Gagal: ' + (err.message || String(err)), '#c62828', 5000);

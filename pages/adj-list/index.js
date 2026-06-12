@@ -57,7 +57,6 @@ function filterRecords(records, filter) {
   if (filter !== 'all') {
     var map = {
       'waiting-ico':  CONFIG.STATUS_ADJ_WAITING_ICO,
-      'need-posting': CONFIG.STATUS_ADJ_NEED_POSTING,
       'done':         CONFIG.STATUS_ADJ_DONE,
       'reject':       CONFIG.STATUS_ADJ_REJECT
     };
@@ -135,8 +134,6 @@ function renderList(records) {
       var userIsMgr = !userIsICO && !!_currentUser.openId && _mySites.length > 0;
       var dest;
       if (userIsICO && s === CONFIG.STATUS_ADJ_WAITING_ICO) {
-        dest = '../adj-ico-detail/index.html' + qs;
-      } else if (userIsMgr && s === CONFIG.STATUS_ADJ_NEED_POSTING) {
         dest = '../adj-ico-detail/index.html' + qs;
       } else {
         dest = '../adj-detail/index.html' + qs;
@@ -266,8 +263,8 @@ function loadDetails() {
           articleDoc:     fieldText(r.fields['Article Doc Adjustment'])
         };
       }).filter(function(d) {
-        // Hanya baris yang header-nya visible (punya site) + status Need Posting / Done
-        var allowed = [CONFIG.STATUS_ADJ_NEED_POSTING, CONFIG.STATUS_ADJ_DONE];
+        // Hanya baris yang header-nya visible (punya site) + status Done
+        var allowed = [CONFIG.STATUS_ADJ_DONE];
         return !!d.site && allowed.indexOf(d.status) !== -1;
       });
 
