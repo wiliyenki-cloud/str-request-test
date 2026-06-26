@@ -1,5 +1,6 @@
 var _recordId      = '';
 var _adjNumber     = '';
+var _adjSite       = '';
 var _acting        = false;
 var _currentStatus = '';
 var _keterangan    = '';
@@ -142,14 +143,23 @@ function renderItemsReadonly(items) {
 }
 
 function downloadCsv() {
-  var BOM    = '﻿';
-  var header = 'No,Article,Description,System,Fisik,Disc,Receipt/Email,Article Doc\n';
-  var rows   = _itemsCache.map(function(it) {
-    function c(v) { var s = String(v == null ? '' : v); return s.indexOf(',') !== -1 ? '"' + s.replace(/"/g,'""') + '"' : s; }
-    return [c(it.seq), c(it.article), c(it.description), c(it.system), c(it.fisik), c(it.disc), c(it.receiptEmail), c(it.articleDoc)].join(',');
-  }).join('\n');
+  function csvCell(v) {
+    var s = String(v == null ? '' : v);
+    return /[,"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  var cols = ['Article','Discrep','Sloc1','Site','Sloc2','Remark','Mvt'];
+  var rows = _itemsCache.map(function(it) {
+    var disc  = it.disc    !== '' ? Number(it.disc)   : 0;
+    var sys   = it.system  !== '' ? Number(it.system) : 0;
+    var fis   = it.fisik   !== '' ? Number(it.fisik)  : 0;
+    var sloc1 = sys < fis ? '1000' : '1009';
+    var sloc2 = sys > fis ? '1009' : '1000';
+    var mvt   = disc < 0  ? '939'  : '940';
+    return [it.article, disc, sloc1, _adjSite, sloc2, it.receiptEmail, mvt].map(csvCell).join(',');
+  });
+  var csv = '﻿' + cols.join(',') + '\r\n' + rows.join('\r\n');
   var a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(BOM + header + rows);
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
   a.download = _adjNumber + '-items.csv';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
@@ -166,6 +176,7 @@ function loadDetail() {
     if (headers.length === 0) throw new Error('ADJ tidak ditemukan');
     var h = headers[0];
     _recordId      = h.record_id;
+    _adjSite       = fieldText(h.fields['Site']);
     _currentStatus = fieldText(h.fields['Status']);
     _keterangan    = fieldText(h.fields['Keterangan Adjustment']);
     var jenis = fieldText(h.fields['Jenis Adjusment']);
