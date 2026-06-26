@@ -2,6 +2,7 @@ var _recordId   = '';
 var _strNumber  = '';
 var _acting     = false;
 var _itemsCache = [];   // cache for CSV export
+var _headerData = {};   // header fields for CSV export
 
 function getParams() {
   var qs = location.search.substring(1);
@@ -88,26 +89,44 @@ function renderItems(items) {
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
 }
 
-// CSV download using data URI + hidden anchor.
-// NOTE: anchor.click() with download attribute may not work in some Lark WebView versions.
-// If download silently fails during testing, use tt.saveFile() instead.
+// CSV download — format SAP upload per template
 function downloadCsv() {
-  var BOM = '﻿';  // UTF-8 BOM for Excel compatibility
-  var header = 'No,Article,Description,Stock Qty,Sales Qty,Request Qty,Approval Qty,Reason\n';
+  function csvCell(v) {
+    var s = String(v == null ? '' : v);
+    return /[,"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  var cols = [
+    'STR ID','Type STR','Article','Description','Request Qty',
+    'Unit','C','Delivery Date','Mdse','Site',
+    'Stor.Loc','PGr','Requisnr','Tracking','Des.Vendor',
+    'Supplying Site','Splt','POrg','Reason'
+  ];
   var rows = _itemsCache.map(function(it) {
-    function csvCell(v) {
-      var s = String(v == null ? '' : v);
-      if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
-        return '"' + s.replace(/"/g, '""') + '"';
-      }
-      return s;
-    }
-    var apv = it.approvalQty !== '' ? it.approvalQty : it.requestQty;
-    return [it.seq, it.article, it.description, it.stockQty, it.salesQty, it.requestQty, apv, it.reason]
-      .map(csvCell).join(',');
-  }).join('\n');
-  var csvContent = BOM + header + rows;
-  var uri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
+    var apvQty = it.approvalQty !== '' ? it.approvalQty : it.requestQty;
+    return [
+      _headerData.strNumber,      // STR ID
+      _headerData.typeStr,         // Type STR
+      it.article,                  // Article
+      it.description,              // Description
+      apvQty,                      // Request Qty (ambil dari Apv Qty)
+      '',                          // Unit
+      '',                          // C
+      _headerData.planReceiveDate, // Delivery Date (Plan Receive Date)
+      '',                          // Mdse
+      _headerData.site,            // Site
+      '',                          // Stor.Loc
+      '',                          // PGr
+      '',                          // Requisnr
+      '',                          // Tracking
+      _headerData.kodeVendor,      // Des.Vendor (Kode Vendor)
+      _headerData.supplyingSite,   // Supplying Site
+      '',                          // Splt
+      'RJ20',                      // POrg (hardcode)
+      it.reason                    // Reason
+    ].map(csvCell).join(',');
+  });
+  var csv = '﻿' + cols.join(',') + '\r\n' + rows.join('\r\n');
+  var uri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
   var a = document.createElement('a');
   a.href = uri;
   a.download = _strNumber + '-items.csv';
@@ -133,18 +152,20 @@ function loadDetail() {
     ).then(function(detailRecords) {
       detailRecords.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
 
-      renderHeader({
+      _headerData = {
         strNumber:       fieldText(h.fields['STR Number']),
         site:            fieldText(h.fields['Site']),
         siteName:        fieldText(h.fields['Site Name']),
         typeStr:         fieldText(h.fields['Type STR']),
         supplyingSite:   fieldText(h.fields['Supplying Site']),
+        kodeVendor:      fieldText(h.fields['Kode Vendor']),
         department:      fieldText(h.fields['Department']),
         planReceiveDate: fmtDate(h.fields['Plan Receive Date']),
         requestedBy:     fieldText(h.fields['Requested By']),
         approvedBy:      fieldText(h.fields['Approved By']),
         submitDate:      fmtDate(h.fields['Submit Date'])
-      });
+      };
+      renderHeader(_headerData);
 
       renderItems(detailRecords.map(function(r) {
         return {
