@@ -26,6 +26,8 @@ function _saveCache(user) {
   // Simpan ke localStorage untuk SEMUA user (termasuk anonymous) supaya survive
   // cross-origin navigation (misal: navigate ke GAS upload lalu balik ke mini app)
   try { localStorage.setItem(_CACHE_KEY, entry); } catch(e) {}
+  // Tampilkan tombol DBG hanya untuk developer
+  if (user.openId && typeof window.dbgEnable === 'function') window.dbgEnable(user.openId);
 }
 
 function _readCache() {

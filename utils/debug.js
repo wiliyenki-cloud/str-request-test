@@ -1,9 +1,10 @@
 // ─── Debug Panel ─────────────────────────────────────────────────────────────
 // Floating debug panel + role-override toolbar for testing.
+// Tombol DBG hanya muncul untuk open_id yang ada di CONFIG.DEV_USER_IDS.
 // Include this script in every page during development.
 
 (function() {
-  var outerDiv, panel, visible = false;
+  var btn, outerDiv, panel, visible = false;
 
   function getRoleOvr() {
     try { return sessionStorage.getItem('_roleOverride') || 'auto'; } catch(e) { return 'auto'; }
@@ -21,13 +22,15 @@
   }
 
   function createPanel() {
-    // ── Toggle button ──────────────────────────────────────────────────────
-    var btn = document.createElement('div');
+    if (btn) return; // sudah dibuat
+
+    // ── Toggle button — hidden by default, ditampilkan oleh dbgEnable ─────────
+    btn = document.createElement('div');
     btn.id  = 'dbg-btn';
     btn.textContent = 'DBG';
     btn.style.cssText =
       'position:fixed;top:6px;right:6px;background:#e53;color:#fff;' +
-      'font:bold 11px monospace;padding:3px 8px;border-radius:4px;z-index:99999;cursor:pointer;opacity:0.85';
+      'font:bold 11px monospace;padding:3px 8px;border-radius:4px;z-index:99999;cursor:pointer;opacity:0.85;display:none';
     btn.addEventListener('click', function() {
       visible = !visible;
       outerDiv.style.display = visible ? 'flex' : 'none';
@@ -95,6 +98,16 @@
     document.body.appendChild(outerDiv);
     updateRoleBtns();
   }
+
+  // ── Tampilkan tombol DBG jika openId ada di CONFIG.DEV_USER_IDS ───────────
+  window.dbgEnable = function(openId) {
+    if (!openId) return;
+    var allowed = (typeof CONFIG !== 'undefined' && Array.isArray(CONFIG.DEV_USER_IDS))
+      ? CONFIG.DEV_USER_IDS : [];
+    if (allowed.indexOf(openId) === -1) return;
+    if (!btn) createPanel();
+    btn.style.display = '';
+  };
 
   // ── Public log function ────────────────────────────────────────────────────
   window.dbg = function(msg) {
