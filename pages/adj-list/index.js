@@ -258,7 +258,7 @@ function loadDetails() {
           description:    fieldText(r.fields['Description']),
           system:         r.fields['System Qty'] != null ? r.fields['System Qty'] : '',
           fisik:          r.fields['Fisik Qty']  != null ? r.fields['Fisik Qty']  : '',
-          disc:           r.fields['Disc']       != null ? r.fields['Disc']       : '',
+          disc:           r.fields['DISC']       != null ? r.fields['DISC']       : '',
           receiptEmail:   fieldText(r.fields['Receipt Email']),
           articleDoc:     fieldText(r.fields['Article Doc Adjustment'])
         };

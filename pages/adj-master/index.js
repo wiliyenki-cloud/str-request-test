@@ -112,7 +112,7 @@ function buildRows(headers, details) {
         description:  fieldText(d.fields['Description']),
         system:       d.fields['System Qty'] != null ? d.fields['System Qty'] : '',
         fisik:        d.fields['Fisik Qty']  != null ? d.fields['Fisik Qty']  : '',
-        disc:         d.fields['Disc']       != null ? d.fields['Disc']       : '',
+        disc:         d.fields['DISC']       != null ? d.fields['DISC']       : '',
         receiptEmail: fieldText(d.fields['Receipt Email']),
         articleDoc:   fieldText(d.fields['Article Doc Adjustment'])
       }));
