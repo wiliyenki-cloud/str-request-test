@@ -24,7 +24,7 @@ var CONFIG = {
   ICO_USER_IDS: ['ou_2dde95ccc246f145e2a4c7b4b60802b3'],
 
   // Developer open_ids — debug panel hanya muncul untuk user ini
-  DEV_USER_IDS: ['ou_2dde95ccc246f145e2a4c7b4b60802b3'],
+  DEV_USER_IDS: ['ou_6799039c37a416e11c78b3d6417e235e'],
 
   // Lark App ID (dari Developer Console > Credentials & Basic Info)
   APP_ID: 'cli_aa9317810ab8ded4',
