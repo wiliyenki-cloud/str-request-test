@@ -99,7 +99,7 @@ function downloadCsv() {
     'STR ID','Type STR','Article','Description','Request Qty',
     'Unit','C','Delivery Date','Mdse','Site',
     'Stor.Loc','PGr','Requisnr','Tracking','Des.Vendor',
-    'Supplying Site','Splt','POrg','Reason'
+    'Fixed Vendor','Splt','POrg','Reason'
   ];
   var rows = _itemsCache.map(function(it) {
     var apvQty = it.approvalQty !== '' ? it.approvalQty : it.requestQty;
@@ -118,8 +118,8 @@ function downloadCsv() {
       '',                          // PGr
       '',                          // Requisnr
       '',                          // Tracking
-      _headerData.kodeVendor,      // Des.Vendor (Kode Vendor)
-      _headerData.supplyingSite,   // Supplying Site
+      '',                          // Des.Vendor (kosong)
+      _headerData.kodeVendor,      // Fixed Vendor (Kode Vendor)
       '',                          // Splt
       'RJ20',                      // POrg (hardcode)
       it.reason                    // Reason
