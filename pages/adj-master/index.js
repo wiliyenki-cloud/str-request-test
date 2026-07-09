@@ -25,7 +25,7 @@ function show(id) {
 function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-function fmtDate(ms) { if (!ms) return '-'; return new Date(ms).toLocaleDateString('id-ID'); }
+function fmtDate(ms) { if (!ms) return '-'; var d=new Date(ms); return ('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.'+d.getFullYear(); }
 
 function merge(base, extra) {
   var out = {}, k;
