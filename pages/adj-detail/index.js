@@ -62,6 +62,47 @@ function renderItems(items) {
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
 }
 
+// ── Lampiran: Attachment + BA Salju Rugi ───────────────────────────────────────
+function renderFiles(attachments, baFiles) {
+  var all = [];
+  (attachments || []).forEach(function(f) { all.push({ label: 'Attachment',    f: f }); });
+  (baFiles     || []).forEach(function(f) { all.push({ label: 'BA Salju Rugi', f: f }); });
+  var section = document.getElementById('section-files');
+  if (all.length === 0) { section.style.display = 'none'; return; }
+  var wrap = document.getElementById('files-list');
+  wrap.innerHTML = all.map(function(x, i) {
+    return '<div class="info-row"><span class="info-lbl">' + x.label + '</span>' +
+      '<a href="#" class="file-link" data-fidx="' + i + '" ' +
+      'style="color:#1a73e8;text-decoration:underline;word-break:break-all">' +
+      escHtml(x.f.name || 'file') + '</a></div>';
+  }).join('');
+  Array.prototype.forEach.call(wrap.querySelectorAll('.file-link'), function(a) {
+    a.addEventListener('click', function(ev) {
+      ev.preventDefault();
+      openAttachment(all[parseInt(this.dataset.fidx, 10)].f, this);
+    });
+  });
+  section.style.display = '';
+}
+
+function openAttachment(f, linkEl) {
+  if (!f || !f.file_token) { alert('File token tidak tersedia.'); return; }
+  var orig = linkEl.textContent;
+  linkEl.textContent = orig + ' ⏳';
+  gasProxy({ action: 'attachmentUrl', fileToken: f.file_token })
+    .then(function(d) {
+      linkEl.textContent = orig;
+      var urls = (d && d.tmp_download_urls) || [];
+      if (!urls.length || !urls[0].tmp_download_url) throw new Error('URL tidak tersedia');
+      var w = window.open(urls[0].tmp_download_url, '_blank');
+      if (!w) window.location.href = urls[0].tmp_download_url;
+    })
+    .catch(function(err) {
+      linkEl.textContent = orig;
+      alert('Gagal buka file: ' + (err.message || String(err)));
+    });
+}
+
 function loadDetail() {
   show('screen-loading');
   larkSearch(
@@ -104,6 +145,8 @@ function loadDetail() {
           articleDoc:   fieldText(r.fields['Article Doc Adjustment'])
         };
       }));
+
+      renderFiles(h.fields['Attachment'], h.fields['BA Salju Rugi']);
 
       show('screen-content');
     });
