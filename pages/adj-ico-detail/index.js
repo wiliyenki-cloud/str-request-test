@@ -153,7 +153,7 @@ function downloadCsv() {
     var sys   = it.system  !== '' ? Number(it.system) : 0;
     var fis   = it.fisik   !== '' ? Number(it.fisik)  : 0;
     var sloc1 = sys < fis ? '1000' : '1009';
-    var sloc2 = sys > fis ? '1009' : '1000';
+    var sloc2 = sloc1 === '1000' ? '1009' : '1000';
     var mvt   = disc < 0  ? '939'  : '940';
     return [it.article, disc, sloc1, _adjSite, sloc2, it.receiptEmail, mvt].map(csvCell).join(',');
   });
