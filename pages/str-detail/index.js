@@ -73,51 +73,54 @@ function loadDetail() {
   var params = getParams();
   var strNumber = params.str || '';
 
-  larkSearch(
-    CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
-    { conjunction: 'and', conditions: [{ field_name: 'STR Number', operator: 'is', value: [strNumber] }] }
-  ).then(function(headerRecords) {
+  Promise.all([
+    larkSearch(
+      CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
+      { conjunction: 'and', conditions: [{ field_name: 'STR Number', operator: 'is', value: [strNumber] }] }
+    ),
+    larkSearch(
+      CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_DETAIL_TABLE_ID,
+      { conjunction: 'and', conditions: [{ field_name: 'STR Number', operator: 'is', value: [strNumber] }] }
+    )
+  ]).then(function(results) {
+    var headerRecords = results[0];
+    var detailRecords = results[1];
     if (headerRecords.length === 0) throw new Error('STR tidak ditemukan');
     var h = headerRecords[0];
 
-    return larkSearch(
-      CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_DETAIL_TABLE_ID,
-      { conjunction: 'and', conditions: [{ field_name: 'STR Number', operator: 'is', value: [strNumber] }] }
-    ).then(function(detailRecords) {
-      detailRecords.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
+    detailRecords.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
 
-      renderHeader({
-        strNumber:       fieldText(h.fields['STR Number']),
-        status:          fieldText(h.fields['Status']),
-        site:            fieldText(h.fields['Site']),
-        siteName:        fieldText(h.fields['Site Name']),
-        typeStr:         fieldText(h.fields['Type STR']),
-        supplyingSite:   fieldText(h.fields['Supplying Site']),
-        department:      fieldText(h.fields['Department']),
-        planReceiveDate: fmtDate(h.fields['Plan Receive Date']),
-        requestedBy:     fieldText(h.fields['Requested By']),
-        submitDate:      fmtDate(h.fields['Submit Date']),
-        approvedBy:      fieldText(h.fields['Approved By']),
-        approvedDate:    fmtDate(h.fields['Approved Date']),
-        prNumber:        fieldText(h.fields['PR Number']),
-        rejectReason:    fieldText(h.fields['Reject Reason'])
-      });
-
-      renderItems(detailRecords.map(function(r) {
-        return {
-          seq:         fieldText(r.fields['Row Sequence']),
-          article:     fieldText(r.fields['Article']),
-          description: fieldText(r.fields['Description']),
-          stockQty:    r.fields['Stock Qty']     != null ? r.fields['Stock Qty'] : '',
-          salesQty:    r.fields['Sales Qty']     != null ? r.fields['Sales Qty'] : '',
-          requestQty:  r.fields['Request Qty']   != null ? r.fields['Request Qty'] : '',
-          approvalQty: r.fields['Approval Qty']  != null ? r.fields['Approval Qty'] : '',
-          reason:      fieldText(r.fields['Reason'])
-        };
-      }));
-
-      show('screen-content');
+    renderHeader({
+      strNumber:       fieldText(h.fields['STR Number']),
+      status:          fieldText(h.fields['Status']),
+      site:            fieldText(h.fields['Site']),
+      siteName:        fieldText(h.fields['Site Name']),
+      typeStr:         fieldText(h.fields['Type STR']),
+      supplyingSite:   fieldText(h.fields['Supplying Site']),
+      department:      fieldText(h.fields['Department']),
+      planReceiveDate: fmtDate(h.fields['Plan Receive Date']),
+      requestedBy:     fieldText(h.fields['Requested By']),
+      submitDate:      fmtDate(h.fields['Submit Date']),
+      approvedBy:      fieldText(h.fields['Approved By']),
+      approvedDate:    fmtDate(h.fields['Approved Date']),
+      prNumber:        fieldText(h.fields['PR Number']),
+      rejectReason:    fieldText(h.fields['Reject Reason'])
     });
+
+    renderItems(detailRecords.map(function(r) {
+      return {
+        seq:         fieldText(r.fields['Row Sequence']),
+        article:     fieldText(r.fields['Article']),
+        description: fieldText(r.fields['Description']),
+        stockQty:    r.fields['Stock Qty']     != null ? r.fields['Stock Qty'] : '',
+        salesQty:    r.fields['Sales Qty']     != null ? r.fields['Sales Qty'] : '',
+        requestQty:  r.fields['Request Qty']   != null ? r.fields['Request Qty'] : '',
+        approvalQty: r.fields['Approval Qty']  != null ? r.fields['Approval Qty'] : '',
+        reason:      fieldText(r.fields['Reason'])
+      };
+    }));
+
+    show('screen-content');
   }).catch(function(err) {
     document.getElementById('err-text').textContent = 'Gagal memuat: ' + (err.message || String(err));
     show('screen-error');

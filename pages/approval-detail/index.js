@@ -81,48 +81,51 @@ function renderItems(items) {
 
 function loadDetail() {
   show('screen-loading');
-  larkSearch(
-    CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
-    { conjunction: 'and', conditions: [{ field_name: 'STR Number', operator: 'is', value: [_strNumber] }] }
-  ).then(function(headerRecords) {
+  Promise.all([
+    larkSearch(
+      CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
+      { conjunction: 'and', conditions: [{ field_name: 'STR Number', operator: 'is', value: [_strNumber] }] }
+    ),
+    larkSearch(
+      CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_DETAIL_TABLE_ID,
+      { conjunction: 'and', conditions: [{ field_name: 'STR Number', operator: 'is', value: [_strNumber] }] }
+    )
+  ]).then(function(results) {
+    var headerRecords = results[0];
+    var detailRecords = results[1];
     if (headerRecords.length === 0) throw new Error('STR tidak ditemukan');
     var h = headerRecords[0];
     _recordId = h.record_id;
 
-    return larkSearch(
-      CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_DETAIL_TABLE_ID,
-      { conjunction: 'and', conditions: [{ field_name: 'STR Number', operator: 'is', value: [_strNumber] }] }
-    ).then(function(detailRecords) {
-      detailRecords.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
+    detailRecords.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
 
-      renderHeader({
-        strNumber:       fieldText(h.fields['STR Number']),
-        site:            fieldText(h.fields['Site']),
-        siteName:        fieldText(h.fields['Site Name']),
-        typeStr:         fieldText(h.fields['Type STR']),
-        supplyingSite:   fieldText(h.fields['Supplying Site']),
-        department:      fieldText(h.fields['Department']),
-        planReceiveDate: fmtDate(h.fields['Plan Receive Date']),
-        requestedBy:     fieldText(h.fields['Requested By']),
-        submitDate:      fmtDate(h.fields['Submit Date'])
-      });
-
-      renderItems(detailRecords.map(function(r) {
-        return {
-          recordId:    r.record_id,
-          seq:         fieldText(r.fields['Row Sequence']),
-          article:     fieldText(r.fields['Article']),
-          description: fieldText(r.fields['Description']),
-          stockQty:    r.fields['Stock Qty']     != null ? r.fields['Stock Qty'] : '',
-          salesQty:    r.fields['Sales Qty']     != null ? r.fields['Sales Qty'] : '',
-          requestQty:  r.fields['Request Qty']   != null ? r.fields['Request Qty'] : '',
-          reason:      fieldText(r.fields['Reason'])
-        };
-      }));
-
-      document.getElementById('footer-main').style.display = '';
-      show('screen-content');
+    renderHeader({
+      strNumber:       fieldText(h.fields['STR Number']),
+      site:            fieldText(h.fields['Site']),
+      siteName:        fieldText(h.fields['Site Name']),
+      typeStr:         fieldText(h.fields['Type STR']),
+      supplyingSite:   fieldText(h.fields['Supplying Site']),
+      department:      fieldText(h.fields['Department']),
+      planReceiveDate: fmtDate(h.fields['Plan Receive Date']),
+      requestedBy:     fieldText(h.fields['Requested By']),
+      submitDate:      fmtDate(h.fields['Submit Date'])
     });
+
+    renderItems(detailRecords.map(function(r) {
+      return {
+        recordId:    r.record_id,
+        seq:         fieldText(r.fields['Row Sequence']),
+        article:     fieldText(r.fields['Article']),
+        description: fieldText(r.fields['Description']),
+        stockQty:    r.fields['Stock Qty']     != null ? r.fields['Stock Qty'] : '',
+        salesQty:    r.fields['Sales Qty']     != null ? r.fields['Sales Qty'] : '',
+        requestQty:  r.fields['Request Qty']   != null ? r.fields['Request Qty'] : '',
+        reason:      fieldText(r.fields['Reason'])
+      };
+    }));
+
+    document.getElementById('footer-main').style.display = '';
+    show('screen-content');
   }).catch(function(err) {
     document.getElementById('err-text').textContent = 'Gagal memuat: ' + (err.message || String(err));
     show('screen-error');

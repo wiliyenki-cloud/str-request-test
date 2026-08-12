@@ -19,7 +19,7 @@ function jsonpFetch(url) {
     var script = document.createElement('script');
     var timer  = setTimeout(function() {
       cleanup(); reject(new Error('Timeout koneksi ke server'));
-    }, 20000);
+    }, 40000);
     function cleanup() {
       clearTimeout(timer);
       try { delete window[cbName]; } catch(e) {}
