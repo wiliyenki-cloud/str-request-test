@@ -45,6 +45,10 @@ function gasProxy(params) {
 
 // ─── Lark Bitable helpers (via GAS proxy) ────────────────────────────────────
 
+// Batas jumlah halaman per larkSearch — 500 baris/halaman, jadi 40 halaman = 20.000
+// baris. Semata-mata pengaman supaya bug paginasi gak pernah lagi bikin loop abadi.
+var LARK_SEARCH_MAX_PAGES = 40;
+
 // larkSearch — loop ambil semua halaman di sisi client (bukan di 1 eksekusi GAS).
 // Tiap panggilan gasProxy cuma ambil 1 halaman: tetap kecil & cepat walau hasilnya
 // >500 baris (loop 1 eksekusi GAS untuk banyak halaman ternyata jauh lebih lambat
@@ -66,7 +70,10 @@ function larkSearch(appToken, tableId, filter, pageSizeOrOpts, maybeOpts) {
   }
   if (opts.pageSize) pageSize = opts.pageSize;
 
-  var allItems = [];
+  var allItems  = [];
+  var seenToken = {};
+  var pageCount = 0;
+
   function fetchPage(pageToken) {
     var params = { action: 'larkSearch', appToken: appToken, tableId: tableId, pageSize: pageSize };
     if (filter)          params.filter     = JSON.stringify(filter);
@@ -75,8 +82,21 @@ function larkSearch(appToken, tableId, filter, pageSizeOrOpts, maybeOpts) {
     if (opts.cacheTtl)   params.cacheTtl   = opts.cacheTtl;
     return gasProxy(params).then(function(d) {
       allItems = allItems.concat(d.items || []);
-      if (d.hasMore && d.pageToken) return fetchPage(d.pageToken);
-      return allItems;
+      pageCount++;
+      if (!d.hasMore || !d.pageToken) return allItems;
+      // Pengaman: kalau paginasi gak maju (token berulang) atau kebanyakan halaman,
+      // berhenti — jangan loop tanpa henti. Pernah kejadian: page_token dikirim di
+      // tempat yang salah ke Lark, tiap halaman balik ke halaman 1, has_more terus
+      // true, dan halaman mentok di "Memuat..." sambil membanjiri Apps Script.
+      if (seenToken[d.pageToken] || pageCount >= LARK_SEARCH_MAX_PAGES) {
+        if (typeof dbg === 'function') {
+          dbg('larkSearch stop: ' + (seenToken[d.pageToken] ? 'pageToken berulang' : 'batas ' + LARK_SEARCH_MAX_PAGES + ' halaman')
+              + ' (' + tableId + ', ' + allItems.length + ' baris)');
+        }
+        return allItems;
+      }
+      seenToken[d.pageToken] = true;
+      return fetchPage(d.pageToken);
     });
   }
   return fetchPage(null);
