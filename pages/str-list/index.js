@@ -201,6 +201,28 @@ function applyFilter(allSTR, user, mySites, icoMap) {
   return [];
 }
 
+// Batas aman kalau tanggal dikosongkan (tombol "Clear") — jangan pernah fetch
+// seluruh histori STR tanpa batas, tabelnya terus tumbuh seiring waktu.
+var STR_LIST_MAX_LOOKBACK_MONTHS = 24;
+function effectiveDateFromMs() {
+  if (_dateFrom) return dayStartMs(_dateFrom);
+  var d = new Date();
+  d.setMonth(d.getMonth() - STR_LIST_MAX_LOOKBACK_MONTHS);
+  return d.getTime();
+}
+
+// Filter STR Number by Submit Date range langsung di Lark (server-side) —
+// tabel STR_HEADER terus tumbuh, fetch tanpa filter timeout begitu datanya besar.
+function buildStrHeaderFilter() {
+  var conditions = [
+    { field_name: 'Submit Date', operator: 'isGreater', value: ['ExactDate', String(effectiveDateFromMs() - 1)] }
+  ];
+  if (_dateTo) {
+    conditions.push({ field_name: 'Submit Date', operator: 'isLess', value: ['ExactDate', String(dayEndMs(_dateTo) + 1)] });
+  }
+  return { conjunction: 'and', conditions: conditions };
+}
+
 function loadList() {
   show('screen-loading');
   if (typeof dbg === 'function') dbg('--- loadList start ---');
@@ -208,7 +230,7 @@ function loadList() {
   getUserInfo().then(function(user) {
     if (typeof dbg === 'function') dbg('getUserInfo → openId=' + (user.openId || '(empty)') + ' nick=' + user.nickName);
 
-    var pSTR   = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, null);
+    var pSTR   = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, buildStrHeaderFilter());
     var pICO   = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.MASTER_ICO_TABLE_ID, null);
     var pSites = user.openId
       ? larkSearch(CONFIG.MASTER_BASE_APP_TOKEN, CONFIG.MASTER_SITE_TABLE_ID, null)
@@ -454,27 +476,26 @@ document.getElementById('search-input').addEventListener('input', function() {
   }, 300);
 });
 
-// Date from
+// Date from/to/clear — filter tanggal sekarang dikirim ke server (Lark), jadi
+// ganti rentang tanggal berarti fetch ulang, bukan cuma re-filter data yang sudah ada.
 document.getElementById('date-from').addEventListener('change', function() {
   _dateFrom    = this.value;
   _currentPage = 1;
-  renderList(_allRecords);
+  loadList();
 });
 
-// Date to
 document.getElementById('date-to').addEventListener('change', function() {
   _dateTo      = this.value;
   _currentPage = 1;
-  renderList(_allRecords);
+  loadList();
 });
 
-// Clear dates
 document.getElementById('btn-clear-dates').addEventListener('click', function() {
   _dateFrom = ''; _dateTo = '';
   _currentPage = 1;
   document.getElementById('date-from').value = '';
   document.getElementById('date-to').value   = '';
-  renderList(_allRecords);
+  loadList();
 });
 
 // Set default date input values
