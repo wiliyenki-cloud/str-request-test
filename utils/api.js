@@ -49,12 +49,30 @@ function gasProxy(params) {
 // Tiap panggilan gasProxy cuma ambil 1 halaman: tetap kecil & cepat walau hasilnya
 // >500 baris (loop 1 eksekusi GAS untuk banyak halaman ternyata jauh lebih lambat
 // daripada linear per halaman, jadi paginasinya dipindah kesini).
-function larkSearch(appToken, tableId, filter, pageSize) {
+// Argumen ke-4 boleh angka (pageSize, gaya lama) atau object opsi:
+//   fieldNames — array nama kolom yang dipakai; sisanya gak usah ditarik dari Lark.
+//                Tanpa ini Lark balikin SEMUA kolom (avatar_url user, email, dll).
+//   cacheTtl   — detik; kalau diisi, hasilnya di-cache di GAS dan dipakai bareng
+//                SEMUA user. Cuma buat master data yang jarang berubah — JANGAN
+//                dipakai untuk data transaksi (STR/ADJ) yang harus selalu fresh.
+function larkSearch(appToken, tableId, filter, pageSizeOrOpts, maybeOpts) {
+  var opts     = {};
+  var pageSize = 500;
+  if (pageSizeOrOpts && typeof pageSizeOrOpts === 'object') {
+    opts = pageSizeOrOpts;
+  } else {
+    if (pageSizeOrOpts) pageSize = pageSizeOrOpts;
+    opts = maybeOpts || {};
+  }
+  if (opts.pageSize) pageSize = opts.pageSize;
+
   var allItems = [];
   function fetchPage(pageToken) {
-    var params = { action: 'larkSearch', appToken: appToken, tableId: tableId, pageSize: pageSize || 500 };
-    if (filter)     params.filter    = JSON.stringify(filter);
-    if (pageToken)  params.pageToken = pageToken;
+    var params = { action: 'larkSearch', appToken: appToken, tableId: tableId, pageSize: pageSize };
+    if (filter)          params.filter     = JSON.stringify(filter);
+    if (pageToken)       params.pageToken  = pageToken;
+    if (opts.fieldNames) params.fieldNames = JSON.stringify(opts.fieldNames);
+    if (opts.cacheTtl)   params.cacheTtl   = opts.cacheTtl;
     return gasProxy(params).then(function(d) {
       allItems = allItems.concat(d.items || []);
       if (d.hasMore && d.pageToken) return fetchPage(d.pageToken);

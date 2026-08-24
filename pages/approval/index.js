@@ -39,7 +39,7 @@ function loadList() {
     var openId = user.openId;
 
     // Fetch MASTER SITE to find which sites this manager handles
-    larkSearch(CONFIG.MASTER_BASE_APP_TOKEN, CONFIG.MASTER_SITE_TABLE_ID, null)
+    larkSearch(CONFIG.MASTER_BASE_APP_TOKEN, CONFIG.MASTER_SITE_TABLE_ID, null, CONFIG.MASTER_SITE_OPTS)
       .then(function(siteRecords) {
         var mySites = siteRecords
           .filter(function(r) {

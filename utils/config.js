@@ -45,3 +45,17 @@ var CONFIG = {
   STATUS_ADJ_DONE:         'Done Create ADJ',
   STATUS_ADJ_REJECT:       'Reject'
 };
+
+// Opsi fetch master data (Master Site & Master ICO) — dipakai semua halaman list.
+// Tabel ini ditarik tiap kali halaman dibuka oleh SETIAP user, padahal isinya jarang
+// berubah dan cuma 2 kolom yang kepakai. fieldNames memangkas payload (Master Site
+// tanpa ini ~592 KB karena ikut bawa avatar/email/NIK yang gak dipakai), cacheTtl
+// bikin hasilnya dipakai bareng semua user dari cache GAS.
+CONFIG.MASTER_SITE_OPTS = {
+  fieldNames: [CONFIG.MASTER_SITE_FIELD, CONFIG.MASTER_SM_USER_FIELD],
+  cacheTtl:   600
+};
+CONFIG.MASTER_ICO_OPTS = {
+  fieldNames: ['Site', 'ICO'],
+  cacheTtl:   600
+};

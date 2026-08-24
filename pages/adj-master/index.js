@@ -121,15 +121,38 @@ function buildRows(headers, details) {
   return rows;
 }
 
+// Batas aman kalau tanggal dikosongkan (tombol "Clear") — jangan pernah fetch
+// seluruh histori ADJ tanpa batas, tabelnya terus tumbuh seiring waktu.
+var ADJ_MASTER_MAX_LOOKBACK_MONTHS = 24;
+function effectiveDateFromMs() {
+  if (_dateFrom) return dayStartMs(_dateFrom);
+  var d = new Date();
+  d.setMonth(d.getMonth() - ADJ_MASTER_MAX_LOOKBACK_MONTHS);
+  return d.getTime();
+}
+
+// Filter Submit Date langsung di Lark (server-side) — tabel ADJ_HEADER terus
+// tumbuh, fetch tanpa filter bakal timeout begitu datanya besar (persis yang
+// sudah kejadian di STR_HEADER).
+function buildAdjHeaderFilter() {
+  var conditions = [
+    { field_name: 'Submit Date', operator: 'isGreater', value: ['ExactDate', String(effectiveDateFromMs() - 1)] }
+  ];
+  if (_dateTo) {
+    conditions.push({ field_name: 'Submit Date', operator: 'isLess', value: ['ExactDate', String(dayEndMs(_dateTo) + 1)] });
+  }
+  return { conjunction: 'and', conditions: conditions };
+}
+
 function loadData() {
   show('screen-loading');
   getUserInfo().then(function(user) {
     _currentUser = user;
-    var pHeaders = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, null);
+    var pHeaders = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, buildAdjHeaderFilter());
     var pDetails = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_DETAIL_TABLE_ID, null);
-    var pICO     = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.MASTER_ICO_TABLE_ID, null);
+    var pICO     = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.MASTER_ICO_TABLE_ID, null, CONFIG.MASTER_ICO_OPTS);
     var pSites   = user.openId
-      ? larkSearch(CONFIG.MASTER_BASE_APP_TOKEN, CONFIG.MASTER_SITE_TABLE_ID, null)
+      ? larkSearch(CONFIG.MASTER_BASE_APP_TOKEN, CONFIG.MASTER_SITE_TABLE_ID, null, CONFIG.MASTER_SITE_OPTS)
       : Promise.resolve([]);
 
     Promise.all([pHeaders, pDetails, pICO, pSites]).then(function(res) {
@@ -293,13 +316,15 @@ document.getElementById('search-input').addEventListener('input', function() {
   var val = this.value;
   _searchTimer = setTimeout(function() { _searchText = val.trim(); render(); }, 300);
 });
-document.getElementById('date-from').addEventListener('change', function() { _dateFrom = this.value; render(); });
-document.getElementById('date-to').addEventListener('change',   function() { _dateTo   = this.value; render(); });
+// Filter tanggal sekarang dikirim ke server (Lark), jadi ganti rentang tanggal
+// berarti fetch ulang — bukan cuma re-filter data yang sudah ada di memori.
+document.getElementById('date-from').addEventListener('change', function() { _dateFrom = this.value; loadData(); });
+document.getElementById('date-to').addEventListener('change',   function() { _dateTo   = this.value; loadData(); });
 document.getElementById('btn-clear-dates').addEventListener('click', function() {
   _dateFrom = ''; _dateTo = '';
   document.getElementById('date-from').value = '';
   document.getElementById('date-to').value   = '';
-  render();
+  loadData();
 });
 
 document.getElementById('date-from').value = _dateFrom;
