@@ -13,7 +13,7 @@ function fieldText(val) {
 }
 
 // ─── JSONP — tidak kena CORS, semua call ke Lark via GAS proxy ───────────────
-function jsonpFetch(url) {
+function jsonpFetchOnce(url) {
   return new Promise(function(resolve, reject) {
     var cbName = '_cb' + Date.now() + Math.floor(Math.random() * 1e6);
     var script = document.createElement('script');
@@ -29,6 +29,21 @@ function jsonpFetch(url) {
     script.onerror  = function() { cleanup(); reject(new Error('Gagal koneksi ke server')); };
     script.src = url + '&callback=' + cbName;
     document.head.appendChild(script);
+  });
+}
+
+// Beberapa request ke Apps Script bisa gagal sesaat kalau banyak request lain
+// nabrak deployment yang sama bersamaan (kena batas concurrent execution Apps
+// Script) — bukan berarti servernya beneran mati. Retry singkat dengan jeda
+// sebelum nyerah ke user, biar kontensi sesaat gak langsung jadi error di layar.
+var JSONP_RETRIES     = 2;
+var JSONP_RETRY_DELAY = 1200;
+function jsonpFetch(url, attempt) {
+  attempt = attempt || 0;
+  return jsonpFetchOnce(url).catch(function(err) {
+    if (attempt >= JSONP_RETRIES) throw err;
+    return new Promise(function(resolve) { setTimeout(resolve, JSONP_RETRY_DELAY); })
+      .then(function() { return jsonpFetch(url, attempt + 1); });
   });
 }
 
