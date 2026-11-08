@@ -3,7 +3,7 @@ var TABS_ALL = [
   { id: 'adj-list', label: 'ADJ List', desc: 'Lihat & kelola request ADJ', icon: '📝', url: '../adj-list/index.html' }
 ];
 
-var DEV_RPA_MAX = 50;   // batas STR per klik tombol uji (setiap baris = satu panggilan GAS)
+var DEV_RPA_MAX = 10;   // batas STR per klik tombol uji (setiap STR = banyak panggilan GAS berurutan)
 
 function showEl(id) {
   document.getElementById('screen-loading').style.display = 'none';
