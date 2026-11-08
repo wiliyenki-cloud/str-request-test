@@ -62,8 +62,9 @@ CONFIG.MASTER_ICO_OPTS = {
 
 // ─── Alur STR V2 — hanya aktif bila home dibuka dengan ?env=test ─────────────
 // Tanpa parameter itu, semua nilai di bawah memberi hasil yang sama dengan sebelumnya
-// (config.test.js menjaganya). Home tanpa ?env=test menghapus env yang tersimpan,
-// jadi pengguna yang membuka link produksi selalu kembali ke produksi.
+// (config.test.js menjaganya). Env uji bertahan selama sesi supaya tombol Home dan
+// redirect auth tidak diam-diam kembali ke produksi; keluar dengan membuka home
+// dengan ?env=prod (config.test.js menjaganya).
 CONFIG.FLOW_V2 = false;
 CONFIG.STATUS_AFTER_APPROVE = CONFIG.STATUS_WAITING_ICO;   // alur lama
 
@@ -81,9 +82,9 @@ CONFIG.TEST = {
   var env = '';
   try {
     var m = location.search.match(/[?&]env=([a-z]+)/);
-    if (onHome) {
-      if (m) sessionStorage.setItem('_env', m[1]);
-      else   sessionStorage.removeItem('_env');
+    if (onHome && m) {
+      if (m[1] === 'test') sessionStorage.setItem('_env', 'test');
+      else                 sessionStorage.removeItem('_env');   // ?env=prod keluar dari mode uji
     }
     env = sessionStorage.getItem('_env') || '';
   } catch (e) {}

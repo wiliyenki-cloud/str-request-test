@@ -55,8 +55,14 @@ test('halaman non-home mengikuti env yang tersimpan', () => {
   assert.strictEqual(CONFIG.FLOW_V2, true);
 });
 
-test('home tanpa parameter env menghapus env tersimpan (kembali ke produksi)', () => {
+test('home tanpa parameter env mempertahankan env tersimpan', () => {
   const { CONFIG, store } = load('/str-request/lark-mini-app/pages/home/index.html', '', { _env: 'test' });
+  assert.strictEqual(CONFIG.FLOW_V2, true);
+  assert.strictEqual(store._env, 'test');
+});
+
+test('home dengan ?env=prod menghapus env tersimpan', () => {
+  const { CONFIG, store } = load('/str-request/lark-mini-app/pages/home/index.html', '?env=prod', { _env: 'test' });
   assert.strictEqual(CONFIG.FLOW_V2, false);
   assert.ok(!('_env' in store));
   Object.keys(PROD).forEach((k) => assert.strictEqual(CONFIG[k], PROD[k], k));
