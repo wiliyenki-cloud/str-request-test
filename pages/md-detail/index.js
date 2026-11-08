@@ -172,7 +172,6 @@ document.getElementById('btn-send').addEventListener('click', function() {
     return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, _recordId, fields)
       .then(function() { return v.kept; });
   }).then(function(kept) {
-    setActing(false);
     showToast(kept > 0 ? 'Terkirim ke IP.' : 'Semua item ditolak, STR ditolak.', kept > 0 ? '#2e7d32' : '#c62828');
     setTimeout(function() { window.history.back(); }, 1500);
   }).catch(function(err) {
@@ -210,7 +209,6 @@ document.getElementById('btn-confirm-reject').addEventListener('click', function
       'MD Reviewed By': user.nickName || 'MD'
     });
   }).then(function() {
-    setActing(false);
     showToast('STR ditolak.', '#c62828');
     setTimeout(function() { window.history.back(); }, 1500);
   }).catch(function(err) {

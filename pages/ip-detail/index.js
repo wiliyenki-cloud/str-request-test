@@ -202,7 +202,6 @@ document.getElementById('btn-save-pr').addEventListener('click', function() {
   larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, _recordId, {
     'Status': FLOW.S.DONE, 'PR Number': pr
   }).then(function() {
-    setActing(false);
     showToast('STR Done! PR: ' + pr, '#2e7d32');
     setTimeout(function() { window.history.back(); }, 1500);
   }).catch(function(err) {
@@ -234,7 +233,6 @@ document.getElementById('btn-confirm-reject').addEventListener('click', function
   larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, _recordId, {
     'Status': FLOW.S.REJECT, 'Reject Stage': 'IP', 'Reject Reason': reason, 'PR Number': '-'
   }).then(function() {
-    setActing(false);
     showToast('STR ditolak.', '#c62828');
     setTimeout(function() { window.history.back(); }, 1500);
   }).catch(function(err) {
