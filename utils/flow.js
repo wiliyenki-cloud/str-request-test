@@ -62,7 +62,7 @@ var FLOW = (function () {
       var qty = approvedQty(it);
       if (dec.d === 'qty') {
         var q = Number(dec.q);
-        if (dec.q === '' || dec.q == null || !isFinite(q) || Math.floor(q) !== q || q < 0 || q > 999) {
+        if (dec.q == null || String(dec.q).trim() === '' || !isFinite(q) || Math.floor(q) !== q || q < 0 || q > 999) {
           return { ok: false, error: 'Qty item ' + it.seq + ' harus bilangan bulat 0 sampai 999', kept: 0 };
         }
         qty = q;
@@ -78,14 +78,15 @@ var FLOW = (function () {
 
   function pad2(n) { return ('0' + n).slice(-2); }
   function ddmmyyyy(ms) {
-    if (!ms) return '';
-    var d = new Date(ms);
+    var t = Number(ms);
+    if (!t) return '';
+    var d = new Date(t);
     return pad2(d.getDate()) + '.' + pad2(d.getMonth() + 1) + '.' + d.getFullYear();
   }
 
   function csvCell(v) {
     var s = String(v == null ? '' : v);
-    return /[,"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    return /[,"\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
 
   // header: {strNumber, site, kodeVendor, planReceiveMs}; items: [{seq, article, description, requestQty, approvalQty}]
@@ -112,8 +113,8 @@ var FLOW = (function () {
   function dummyRpa(site, article) {
     var h = hash(site + '|' + article);
     var stock = h % 40;
-    var sales = 8 + (h >> 3) % 50;
-    return { stockQty: stock, stockDc: 100 + (h >> 5) % 400, salesQty: sales, suggestedQty: Math.max(0, sales - stock) };
+    var sales = 8 + (h >>> 3) % 50;
+    return { stockQty: stock, stockDc: 100 + (h >>> 5) % 400, salesQty: sales, suggestedQty: Math.max(0, sales - stock) };
   }
 
   function mdDepartmentsFor(openId, mdMap) {
@@ -125,10 +126,14 @@ var FLOW = (function () {
   function runLimited(tasks, limit) {
     var results = new Array(tasks.length);
     var next = 0;
+    var failed = false;
+    limit = Math.max(1, Number(limit) || 1);
     function worker() {
-      if (next >= tasks.length) return Promise.resolve();
+      if (failed || next >= tasks.length) return Promise.resolve();
       var i = next++;
-      return tasks[i]().then(function (r) { results[i] = r; return worker(); });
+      var p;
+      try { p = tasks[i](); } catch (e) { failed = true; return Promise.reject(e); }
+      return Promise.resolve(p).then(function (r) { results[i] = r; return worker(); }, function (e) { failed = true; throw e; });
     }
     var workers = [];
     for (var k = 0; k < Math.min(limit, tasks.length); k++) workers.push(worker());
