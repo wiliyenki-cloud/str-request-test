@@ -59,3 +59,49 @@ CONFIG.MASTER_ICO_OPTS = {
   fieldNames: ['Site', 'ICO'],
   cacheTtl:   600
 };
+
+// ─── Alur STR V2 — hanya aktif bila home dibuka dengan ?env=test ─────────────
+// Tanpa parameter itu, semua nilai di bawah memberi hasil yang sama dengan sebelumnya
+// (config.test.js menjaganya). Home tanpa ?env=test menghapus env yang tersimpan,
+// jadi pengguna yang membuka link produksi selalu kembali ke produksi.
+CONFIG.FLOW_V2 = false;
+CONFIG.STATUS_AFTER_APPROVE = CONFIG.STATUS_WAITING_ICO;   // alur lama
+
+CONFIG.TEST = {
+  STR_BASE_APP_TOKEN:  'FILL_FROM_TASK_0_BASE_TOKEN',
+  STR_HEADER_TABLE_ID: 'FILL_FROM_TASK_0_STR_HEADER',
+  STR_DETAIL_TABLE_ID: 'FILL_FROM_TASK_0_STR_DETAIL',
+  MASTER_ICO_TABLE_ID: 'FILL_FROM_TASK_0_MASTER_ICO',
+  ADJ_HEADER_TABLE_ID: 'FILL_FROM_TASK_0_ADJ_HEADER',
+  ADJ_DETAIL_TABLE_ID: 'FILL_FROM_TASK_0_ADJ_DETAIL'
+};
+
+(function () {
+  var onHome = location.pathname.indexOf('/home/') !== -1;
+  var env = '';
+  try {
+    var m = location.search.match(/[?&]env=([a-z]+)/);
+    if (onHome) {
+      if (m) sessionStorage.setItem('_env', m[1]);
+      else   sessionStorage.removeItem('_env');
+    }
+    env = sessionStorage.getItem('_env') || '';
+  } catch (e) {}
+  if (env !== 'test') return;
+
+  var T   = CONFIG.TEST;
+  var DEV = CONFIG.DEV_USER_IDS[0];
+  CONFIG.FLOW_V2             = true;
+  CONFIG.STR_BASE_APP_TOKEN  = T.STR_BASE_APP_TOKEN;
+  CONFIG.STR_HEADER_TABLE_ID = T.STR_HEADER_TABLE_ID;
+  CONFIG.STR_DETAIL_TABLE_ID = T.STR_DETAIL_TABLE_ID;
+  CONFIG.MASTER_ICO_TABLE_ID = T.MASTER_ICO_TABLE_ID;
+  CONFIG.ADJ_HEADER_TABLE_ID = T.ADJ_HEADER_TABLE_ID;
+  CONFIG.ADJ_DETAIL_TABLE_ID = T.ADJ_DETAIL_TABLE_ID;
+  CONFIG.STATUS_AFTER_APPROVE = 'Approved - Waiting RPA';
+
+  // Peran MD dan IP (sementara berupa daftar open_id, seperti ICO_USER_IDS).
+  // Akun developer dipakai untuk semua peran supaya satu orang bisa menguji seluruh alur.
+  CONFIG.MD_MAP = { 'Sofa & Chair': [DEV], 'Bedroom': [DEV], 'Kitchen': [DEV] };
+  CONFIG.IP_USER_IDS = [DEV];
+})();
