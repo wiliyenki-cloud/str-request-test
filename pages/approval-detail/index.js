@@ -152,13 +152,13 @@ document.getElementById('btn-approve').addEventListener('click', function() {
     return getUserInfo();
   }).then(function(user) {
     return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, _recordId, {
-      'Status':        CONFIG.STATUS_WAITING_ICO,
+      'Status':        CONFIG.STATUS_AFTER_APPROVE || CONFIG.STATUS_WAITING_ICO,
       'Approved By':   user.nickName || 'Manager',
       'Approved Date': Date.now()
     });
   }).then(function() {
     setActing(false);
-    showToast('STR Approved! → Waiting Create by ICO', '#2e7d32');
+    showToast('STR Approved! → ' + (CONFIG.STATUS_AFTER_APPROVE || CONFIG.STATUS_WAITING_ICO), '#2e7d32');
     setTimeout(function() { window.history.back(); }, 1500);
   }).catch(function(err) {
     showToast('Approve gagal: ' + (err.message || err), '#c62828');
