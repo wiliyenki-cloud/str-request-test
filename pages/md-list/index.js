@@ -1,5 +1,6 @@
 var PAGE_SIZE     = 50;
-var HEADER_FIELDS = ['STR Number', 'Site', 'Site Name', 'Department', 'Plan Receive Date', 'Submit Date'];
+// Semua field yang dipakai di filter harus ikut di fieldNames: GAS menerapkan ulang filter pada field hasil proyeksi.
+var HEADER_FIELDS = ['STR Number', 'Site', 'Site Name', 'Department', 'Plan Receive Date', 'Submit Date', 'Status'];
 var _items = [];
 var _shown = PAGE_SIZE;
 

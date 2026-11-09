@@ -73,7 +73,8 @@ function fillOne(h) {
 function fillRpaDummy() {
   return larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
     { conjunction: 'and', conditions: [{ field_name: 'Status', operator: 'is', value: [FLOW.S.APPROVED_RPA] }] },
-    { fieldNames: ['STR Number', 'Site'] })
+    // Status dipakai di filter, jadi wajib ada di fieldNames (GAS menerapkan ulang filter pada field proyeksi).
+    { fieldNames: ['STR Number', 'Site', 'Status'] })
     .then(function(headers) {
       var batch = headers.slice(0, DEV_RPA_MAX);
       var chain = Promise.resolve(0);
