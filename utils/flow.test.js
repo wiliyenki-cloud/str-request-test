@@ -184,3 +184,28 @@ test('finalQty dan parseMdReview: kasus tepi', () => {
   assert.deepStrictEqual(FLOW.parseMdReview('null'), {});
   assert.deepStrictEqual(FLOW.parseMdReview('5'), {});
 });
+
+test('roleOverride: kosong bila sessionStorage tidak ada (node)', () => {
+  assert.strictEqual(typeof sessionStorage, 'undefined');
+  assert.strictEqual(FLOW.roleOverride(), '');
+});
+
+test('roleOverride: mengembalikan nilai tersimpan, kosong bila null', () => {
+  global.sessionStorage = { getItem: (k) => (k === '_roleOverride' ? 'md' : null) };
+  try {
+    assert.strictEqual(FLOW.roleOverride(), 'md');
+    global.sessionStorage = { getItem: () => null };
+    assert.strictEqual(FLOW.roleOverride(), '');
+  } finally {
+    delete global.sessionStorage;
+  }
+});
+
+test('roleOverride: kosong bila getItem melempar error', () => {
+  global.sessionStorage = { getItem: () => { throw new Error('blocked'); } };
+  try {
+    assert.strictEqual(FLOW.roleOverride(), '');
+  } finally {
+    delete global.sessionStorage;
+  }
+});

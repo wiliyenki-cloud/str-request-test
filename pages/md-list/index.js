@@ -74,8 +74,9 @@ function load() {
   }
   show('screen-loading');
   getUserInfo().then(function(user) {
-    var depts = FLOW.mdDepartmentsFor(user.openId, CONFIG.MD_MAP);
-    if (depts.length === 0) {
+    var asMd = FLOW.roleOverride() === 'md';   // mode uji: semua department
+    var depts = asMd ? Object.keys(CONFIG.MD_MAP) : FLOW.mdDepartmentsFor(user.openId, CONFIG.MD_MAP);
+    if (depts.length === 0 && !asMd) {
       document.getElementById('empty-text').textContent = 'Anda tidak terdaftar sebagai MD.';
       show('screen-empty');
       return null;

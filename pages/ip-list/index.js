@@ -82,7 +82,8 @@ function load() {
   }
   show('screen-loading');
   getUserInfo().then(function(user) {
-    if (!user.openId || CONFIG.IP_USER_IDS.indexOf(user.openId) === -1) {
+    var asIp = FLOW.roleOverride() === 'ip';   // mode uji dari panel DBG
+    if (!asIp && (!user.openId || CONFIG.IP_USER_IDS.indexOf(user.openId) === -1)) {
       document.getElementById('empty-text').textContent = 'Anda tidak terdaftar sebagai IP.';
       show('screen-empty');
       return null;

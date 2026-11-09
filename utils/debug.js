@@ -54,11 +54,16 @@
     lbl.style.cssText = 'color:#666;font:11px monospace;';
     toolbar.appendChild(lbl);
 
-    [
+    var roleList = [
       { role: 'auto',    label: 'Auto'    },
       { role: 'manager', label: '👔 Mgr' },
       { role: 'ico',     label: '🏢 ICO' }
-    ].forEach(function(item) {
+    ];
+    if (typeof CONFIG !== 'undefined' && CONFIG.FLOW_V2) {
+      roleList.push({ role: 'md',      label: '🧾 MD' });
+      roleList.push({ role: 'ip',      label: '📦 IP' });
+    }
+    roleList.forEach(function(item) {
       var b = document.createElement('button');
       b.textContent    = item.label;
       b.dataset.role   = item.role;

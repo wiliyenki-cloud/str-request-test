@@ -18,10 +18,10 @@ function extraTabs(user) {
   var tabs = [];
   if (!CONFIG.FLOW_V2) return tabs;
   var uid = user && user.openId;
-  if (FLOW.mdDepartmentsFor(uid, CONFIG.MD_MAP).length > 0) {
+  if (FLOW.roleOverride() === 'md' || FLOW.mdDepartmentsFor(uid, CONFIG.MD_MAP).length > 0) {
     tabs.push({ id: 'md-list', label: 'MD Review', desc: 'Review STR per department', icon: '🧾', url: '../md-list/index.html' });
   }
-  if (uid && CONFIG.IP_USER_IDS.indexOf(uid) !== -1) {
+  if (FLOW.roleOverride() === 'ip' || (uid && CONFIG.IP_USER_IDS.indexOf(uid) !== -1)) {
     tabs.push({ id: 'ip-list', label: 'IP Release', desc: 'CSV dan nomor PR', icon: '📦', url: '../ip-list/index.html' });
   }
   return tabs;

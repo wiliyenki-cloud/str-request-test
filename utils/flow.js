@@ -140,11 +140,17 @@ var FLOW = (function () {
     return Promise.all(workers).then(function () { return results; });
   }
 
+  // Role yang dipilih lewat panel DBG (sessionStorage), '' bila tidak ada atau tidak tersedia.
+  function roleOverride() {
+    try { return sessionStorage.getItem('_roleOverride') || ''; } catch (e) { return ''; }
+  }
+
   return {
     S: S, CSV_COLS: CSV_COLS,
     parseMdReview: parseMdReview, serializeMdReview: serializeMdReview,
     finalQty: finalQty, validateMdDecisions: validateMdDecisions, statusAfterMd: statusAfterMd,
-    buildCsv: buildCsv, dummyRpa: dummyRpa, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited
+    buildCsv: buildCsv, dummyRpa: dummyRpa, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited,
+    roleOverride: roleOverride
   };
 })();
 
