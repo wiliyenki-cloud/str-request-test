@@ -508,6 +508,6 @@ document.getElementById('date-to').value   = _dateTo;
 // Reload hanya jika kembali ke tab setelah >60 detik (hemat GAS quota)
 document.addEventListener('visibilitychange', (function() {
   var _t = 0;
-  return function() { if (!document.hidden && Date.now() - _t > 60000) { _t = Date.now(); loadList(); } };
+  return function() { if (!document.hidden && Date.now() - _t > 300000) { _t = Date.now(); loadList(); } };
 })());
 loadList();

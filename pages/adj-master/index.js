@@ -341,7 +341,7 @@ document.getElementById('date-to').value   = _dateTo;
 
 document.addEventListener('visibilitychange', (function() {
   var _t = 0;
-  return function() { if (!document.hidden && Date.now() - _t > 60000) { _t = Date.now(); loadData(); } };
+  return function() { if (!document.hidden && Date.now() - _t > 300000) { _t = Date.now(); loadData(); } };
 })());
 loadData();
 
