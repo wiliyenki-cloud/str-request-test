@@ -52,13 +52,36 @@ function jsonpFetch(url, attempt) {
   });
 }
 
+// Token sesi (dari auth.js) ikut di setiap panggilan; GAS memeriksanya sesuai AUTH_MODE.
+function withAuthToken(params) {
+  var t = (typeof authToken === 'function') ? authToken() : '';
+  if (!t) return params;
+  var out = {};
+  Object.keys(params).forEach(function(k) { out[k] = params[k]; });
+  out.token = t;
+  return out;
+}
+
+function isAuthError(msg) {
+  return /^AUTH:/.test(String(msg || ''));
+}
+
 function gasProxy(params) {
-  var qs = Object.keys(params).map(function(k) {
-    return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+  var p = withAuthToken(params);
+  var qs = Object.keys(p).map(function(k) {
+    return encodeURIComponent(k) + '=' + encodeURIComponent(p[k]);
   }).join('&');
   return jsonpFetch(CONFIG.GAS_URL + '?' + qs)
     .then(function(data) {
-      if (data.status !== 'ok') throw new Error(data.message || JSON.stringify(data));
+      if (data.status !== 'ok') {
+        var msg = data.message || JSON.stringify(data);
+        if (isAuthError(msg)) {
+          // Sesi habis atau tidak sah: hapus cache pengguna supaya pembukaan berikutnya memulai ulang login Lark.
+          if (typeof clearUserCache === 'function') clearUserCache();
+          throw new Error('Sesi habis. Tutup lalu buka ulang aplikasi.');
+        }
+        throw new Error(msg);
+      }
       return data.data;
     });
 }

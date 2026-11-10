@@ -268,7 +268,8 @@ function loadDetail() {
           document.getElementById('btn-ba-upload').onclick = function() {
             var url = CONFIG.GAS_URL +
               '?action=baUploadForm' +
-              '&adjNumber=' + encodeURIComponent(_adjNumber);
+              '&adjNumber=' + encodeURIComponent(_adjNumber) +
+              '&token=' + encodeURIComponent(typeof authToken === 'function' ? authToken() : '');
             document.getElementById('upload-iframe').src = url;
             document.getElementById('upload-modal').style.display = 'flex';
           };

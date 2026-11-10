@@ -19,6 +19,7 @@ function _saveCache(user) {
   var entry = JSON.stringify({
     openId:   user.openId   || '',
     nickName: user.nickName || 'User',
+    token:    user.token    || '',
     ts:       Date.now()
   });
   // Simpan ke sessionStorage
@@ -39,7 +40,7 @@ function _readCache() {
     if (raw) {
       var c = JSON.parse(raw);
       if (c && c.ts && (Date.now() - c.ts <= _CACHE_TTL)) {
-        return { openId: c.openId || '', nickName: c.nickName || 'User' };
+        return { openId: c.openId || '', nickName: c.nickName || 'User', token: c.token || '' };
       }
       localStorage.removeItem(_CACHE_KEY);
     }
@@ -50,7 +51,7 @@ function _readCache() {
     if (sraw) {
       var sc = JSON.parse(sraw);
       if (sc && sc.ts && (Date.now() - sc.ts <= _CACHE_TTL)) {
-        return { openId: sc.openId || '', nickName: sc.nickName || 'User' };
+        return { openId: sc.openId || '', nickName: sc.nickName || 'User', token: sc.token || '' };
       }
       sessionStorage.removeItem(_SESS_KEY);
     }
@@ -105,7 +106,7 @@ function getUserInfo() {
         if (typeof dbg === 'function') dbg('auth: authCode OK → GAS exchange...');
         gasProxy({ action: 'getUserByCode', code: res.code })
           .then(function(data) {
-            var user = { openId: data.openId || '', nickName: data.nickName || 'User' };
+            var user = { openId: data.openId || '', nickName: data.nickName || 'User', token: data.token || '' };
             if (typeof dbg === 'function') dbg('auth: GAS OK openId=' + (user.openId || '(anon)') + ' nick=' + user.nickName);
             _saveCache(user);
             resolve(user);
@@ -148,4 +149,10 @@ function clearUserCache() {
   _userInfoMem = null;
   try { localStorage.removeItem(_CACHE_KEY); }   catch(e) {}
   try { sessionStorage.removeItem(_SESS_KEY); }  catch(e) {}
+}
+
+// authToken — token sesi untuk GAS (kosong bila belum ada atau GAS masih mode off)
+function authToken() {
+  var u = _readCache();
+  return (u && u.token) ? u.token : '';
 }
