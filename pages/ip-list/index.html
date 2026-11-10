@@ -9,6 +9,11 @@
   <title>IP Release</title>
   <link rel="stylesheet" href="../ico-list/index.css">
   <style>
+    .filter-bar { display: flex; flex-direction: column; gap: 8px; margin: 0 0 10px; }
+    .filter-bar input, .filter-bar select { width: 100%; border: 1px solid #d0d0d0; border-radius: 6px; padding: 9px 10px; font-size: 14px; box-sizing: border-box; background: #fff; }
+    .filter-row { display: flex; gap: 8px; }
+    .filter-row select { flex: 1; min-width: 0; }
+    .result-count { font-size: 12px; color: #888; margin: 0 0 6px; }
     .btn-more { display: block; margin: 4px auto 0; background: #fff; border: 1px solid #d0d0d0; border-radius: 6px; padding: 8px 18px; font-size: 13px; cursor: pointer; }
   </style>
 </head>
@@ -19,6 +24,17 @@
     </div>
     <div class="filter-tabs" id="filter-tabs">
       <div class="filter-tab active">Antrian IP</div>
+    </div>
+    <div class="filter-bar">
+      <input type="text" id="search-input" placeholder="&#128269; Nomor STR / site...">
+      <div class="filter-row">
+        <select id="status-select" title="Status">
+          <option value="">Semua status</option>
+          <option value="waiting-ip">Siap dibuat CSV</option>
+          <option value="csv-ready">Menunggu PR</option>
+        </select>
+        <select id="site-select" title="Site"><option value="">Semua site</option></select>
+      </div>
     </div>
     <div id="screen-loading" class="center-msg"><p>Memuat data...</p></div>
     <div id="screen-error" class="center-msg" style="display:none">
@@ -37,7 +53,7 @@
   <script src="../../utils/auth.js?v=20"></script>
   <script src="../../utils/api.js?v=12"></script>
   <script src="../../utils/debug.js?v=4"></script>
-  <script src="../../utils/flow.js?v=3"></script>
-  <script src="index.js?v=2"></script>
+  <script src="../../utils/flow.js?v=4"></script>
+  <script src="index.js?v=3"></script>
 </body>
 </html>

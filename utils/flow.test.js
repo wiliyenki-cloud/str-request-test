@@ -280,3 +280,24 @@ test('clampRangeStart: rentang lebih dari 6 bulan dipotong ke awal bulan ke-6 te
   assert.strictEqual(FLOW.clampRangeStart(ms(2026, 5, 9), ms(2026, 5, 1)), ms(2026, 5, 9));
   assert.strictEqual(FLOW.clampRangeStart(ms(2026, 1, 15), ms(2026, 11, 9), 3), ms(2026, 9, 1));
 });
+test('filterItems: cari nomor/site/nama site, filter site, tanpa filter = semua', () => {
+  const items = [
+    { strNumber: '0001/J999/Kitchen/11/2026', site: 'J999', siteName: 'Jakarta Test' },
+    { strNumber: '0002/H001/Bedroom/11/2026', site: 'H001', siteName: 'Batam' },
+    { strNumber: '0003/J999/Bedroom/11/2026', site: 'J999', siteName: 'Jakarta Test' }
+  ];
+  assert.strictEqual(FLOW.filterItems(items, {}).length, 3);
+  assert.strictEqual(FLOW.filterItems(items, { q: '  0002 ' }).length, 1);
+  assert.strictEqual(FLOW.filterItems(items, { q: 'batam' }).length, 1);
+  assert.strictEqual(FLOW.filterItems(items, { q: 'j999' }).length, 2);
+  assert.strictEqual(FLOW.filterItems(items, { site: 'J999' }).length, 2);
+  assert.strictEqual(FLOW.filterItems(items, { site: 'J999', q: 'bedroom' }).length, 1);
+  assert.strictEqual(FLOW.filterItems(items, { site: 'X' }).length, 0);
+});
+
+test('siteOptions: site unik terurut dengan nama', () => {
+  const o = FLOW.siteOptions([
+    { site: 'J999', siteName: 'Jakarta Test' }, { site: 'H001', siteName: 'Batam' }, { site: 'J999', siteName: 'Jakarta Test' }, { site: '' }
+  ]);
+  assert.deepStrictEqual(o, [{ site: 'H001', label: 'H001 — Batam' }, { site: 'J999', label: 'J999 — Jakarta Test' }]);
+});

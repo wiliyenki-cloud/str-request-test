@@ -117,6 +117,29 @@ var FLOW = (function () {
     return { stockQty: stock, stockDc: 100 + (h >>> 5) % 400, salesQty: sales, suggestedQty: Math.max(0, sales - stock) };
   }
 
+  // Saring daftar di sisi layar: o.q = teks bebas (nomor STR, kode site, nama site), o.site = kode site persis.
+  function filterItems(items, o) {
+    o = o || {};
+    var q = String(o.q || '').trim().toLowerCase();
+    return items.filter(function (it) {
+      if (o.site && it.site !== o.site) return false;
+      if (!q) return true;
+      return (String(it.strNumber || '') + ' ' + String(it.site || '') + ' ' + String(it.siteName || '')).toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  // Pilihan dropdown site dari data yang sudah termuat: unik, terurut, dengan nama.
+  function siteOptions(items) {
+    var seen = {}, out = [];
+    items.forEach(function (it) {
+      if (!it.site || seen[it.site]) return;
+      seen[it.site] = true;
+      out.push({ site: it.site, label: it.site + (it.siteName ? ' — ' + it.siteName : '') });
+    });
+    out.sort(function (a, b) { return a.site < b.site ? -1 : a.site > b.site ? 1 : 0; });
+    return out;
+  }
+
   function mdDepartmentsFor(openId, mdMap) {
     if (!openId || !mdMap) return [];
     return Object.keys(mdMap).filter(function (d) { return (mdMap[d] || []).indexOf(openId) !== -1; });
@@ -224,7 +247,7 @@ var FLOW = (function () {
     S: S, CSV_COLS: CSV_COLS,
     parseMdReview: parseMdReview, serializeMdReview: serializeMdReview,
     finalQty: finalQty, validateMdDecisions: validateMdDecisions, statusAfterMd: statusAfterMd,
-    buildCsv: buildCsv, dummyRpa: dummyRpa, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited,
+    buildCsv: buildCsv, dummyRpa: dummyRpa, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited, filterItems: filterItems, siteOptions: siteOptions,
     scopeSites: scopeSites, scopedFilter: scopedFilter, monthMarkers: monthMarkers, detailFilters: detailFilters, clampRangeStart: clampRangeStart,
     roleOverride: roleOverride
   };
