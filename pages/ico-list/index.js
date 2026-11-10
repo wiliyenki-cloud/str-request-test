@@ -85,56 +85,60 @@ function loadList() {
   show('screen-loading');
   getUserInfo().then(function(user) {
     _currentUser = user;
-    Promise.all([
-      larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.MASTER_ICO_TABLE_ID, null, CONFIG.MASTER_ICO_OPTS),
-      larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
-        { conjunction: 'and', conditions: [{ field_name: 'Status', operator: 'is', value: [CONFIG.STATUS_WAITING_ICO] }] }),
-      larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID,
-        { conjunction: 'and', conditions: [{ field_name: 'Status', operator: 'is', value: [CONFIG.STATUS_ADJ_WAITING_ICO] }] })
-    ]).then(function(results) {
-      _icoMap = buildIcoMap(results[0]);
+    // Tahap 1: peta ICO (cache bersama di GAS). Tahap 2: antrian yang sudah dibatasi site ICO.
+    larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.MASTER_ICO_TABLE_ID, null, CONFIG.MASTER_ICO_OPTS).then(function(icoRecords) {
+      _icoMap = buildIcoMap(icoRecords);
 
-      var icoSites;
-      try {
-        icoSites = sessionStorage.getItem('_roleOverride') === 'ico'
-          ? null
-          : (_icoMap[user.openId] || []);
-      } catch(e) {
-        icoSites = _icoMap[user.openId] || [];
+      var override = '';
+      try { override = sessionStorage.getItem('_roleOverride') || ''; } catch(e) {}
+      var icoSites = override === 'ico' ? null : (_icoMap[user.openId] || []);
+      if (icoSites && icoSites.length === 0) {   // bukan ICO untuk site mana pun
+        _strList = []; _adjList = [];
+        renderList(_activeModule);
+        return;
       }
 
-      function filterBySite(records, siteField) {
-        if (!icoSites) return records;
-        return records.filter(function(r) {
-          return icoSites.indexOf(fieldText(r.fields[siteField])) !== -1;
+      var strFilter = FLOW.scopedFilter([{ field_name: 'Status', operator: 'is', value: [CONFIG.STATUS_WAITING_ICO] }], icoSites);
+      var adjFilter = FLOW.scopedFilter([{ field_name: 'Status', operator: 'is', value: [CONFIG.STATUS_ADJ_WAITING_ICO] }], icoSites);
+      return Promise.all([
+        larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, strFilter,
+          { fieldNames: ['STR Number', 'Site', 'Site Name', 'Department', 'Submit Date', 'Plan Receive Date', 'Status'] }),
+        larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, adjFilter,
+          { fieldNames: ['ADJ Number', 'Site', 'Site Name', 'Department', 'Jenis Adjusment', 'Submit Date', 'Status'] })
+      ]).then(function(results) {
+        function filterBySite(records, siteField) {
+          if (!icoSites) return records;
+          return records.filter(function(r) {
+            return icoSites.indexOf(fieldText(r.fields[siteField])) !== -1;
+          });
+        }
+
+        _strList = filterBySite(results[0], 'Site').map(function(r) {
+          return {
+            recordId:        r.record_id,
+            strNumber:       fieldText(r.fields['STR Number']),
+            site:            fieldText(r.fields['Site']),
+            siteName:        fieldText(r.fields['Site Name']),
+            department:      fieldText(r.fields['Department']),
+            submitDate:      fmtDate(r.fields['Submit Date']),
+            planReceiveDate: fmtDate(r.fields['Plan Receive Date'])
+          };
         });
-      }
 
-      _strList = filterBySite(results[1], 'Site').map(function(r) {
-        return {
-          recordId:        r.record_id,
-          strNumber:       fieldText(r.fields['STR Number']),
-          site:            fieldText(r.fields['Site']),
-          siteName:        fieldText(r.fields['Site Name']),
-          department:      fieldText(r.fields['Department']),
-          submitDate:      fmtDate(r.fields['Submit Date']),
-          planReceiveDate: fmtDate(r.fields['Plan Receive Date'])
-        };
+        _adjList = filterBySite(results[1], 'Site').map(function(r) {
+          return {
+            recordId:   r.record_id,
+            adjNumber:  fieldText(r.fields['ADJ Number']),
+            site:       fieldText(r.fields['Site']),
+            siteName:   fieldText(r.fields['Site Name']),
+            department: fieldText(r.fields['Department']),
+            jenis:      fieldText(r.fields['Jenis Adjusment']),
+            submitDate: fmtDate(r.fields['Submit Date'])
+          };
+        });
+
+        renderList(_activeModule);
       });
-
-      _adjList = filterBySite(results[2], 'Site').map(function(r) {
-        return {
-          recordId:   r.record_id,
-          adjNumber:  fieldText(r.fields['ADJ Number']),
-          site:       fieldText(r.fields['Site']),
-          siteName:   fieldText(r.fields['Site Name']),
-          department: fieldText(r.fields['Department']),
-          jenis:      fieldText(r.fields['Jenis Adjusment']),
-          submitDate: fmtDate(r.fields['Submit Date'])
-        };
-      });
-
-      renderList(_activeModule);
     }).catch(function(err) {
       document.getElementById('err-text').textContent = 'Gagal memuat: ' + (err.message || String(err));
       show('screen-error');

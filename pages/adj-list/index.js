@@ -4,6 +4,7 @@ var _currentUser   = { openId: '', nickName: 'User' };
 var _mySites       = [];
 var _searchText    = '';
 var _icoMap        = {};
+var _scopeSites    = null;   // null = semua site, [] = tidak punya akses (diisi loadList)
 
 // Master Detail state
 var _allDetails    = [];
@@ -186,17 +187,25 @@ function buildAdjHeaderFilter() {
 function loadList() {
   show('screen-loading');
   getUserInfo().then(function(user) {
-    var pADJ   = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, buildAdjHeaderFilter());
     var pICO   = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.MASTER_ICO_TABLE_ID, null, CONFIG.MASTER_ICO_OPTS);
     var pSites = user.openId
       ? larkSearch(CONFIG.MASTER_BASE_APP_TOKEN, CONFIG.MASTER_SITE_TABLE_ID, null, CONFIG.MASTER_SITE_OPTS)
       : Promise.resolve([]);
 
-    Promise.all([pADJ, pSites, pICO]).then(function(results) {
+    // Tahap 1: master (cache bersama di GAS). Tahap 2: header yang SUDAH dibatasi site.
+    Promise.all([pSites, pICO]).then(function(master) {
+      var siteRecords = master[0];
+      var icoRecords  = master[1];
+      _icoMap = buildIcoMap(icoRecords);
+      _scopeSites = listScope(user, siteRecords, _icoMap);
+      if (_scopeSites && _scopeSites.length === 0) return [[], siteRecords, icoRecords];
+      return larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID,
+          FLOW.scopedFilter(buildAdjHeaderFilter().conditions, _scopeSites))
+        .then(function(adj) { return [adj, siteRecords, icoRecords]; });
+    }).then(function(results) {
       var adjRecords  = results[0];
       var siteRecords = results[1];
       var icoRecords  = results[2];
-      _icoMap = buildIcoMap(icoRecords);
 
       var mySites = !isICO(user.openId, _icoMap)
         ? siteRecords

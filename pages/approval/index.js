@@ -56,9 +56,12 @@ function loadList() {
 
         if (mySites.length === 0) { show('screen-empty'); return; }
 
+        // Dibatasi site Manager di server dan hanya kolom yang dipakai kartu (Status dan Site
+        // ikut karena dipakai filter).
         larkSearch(
           CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
-          { conjunction: 'and', conditions: [{ field_name: 'Status', operator: 'is', value: [CONFIG.STATUS_WAITING_MGR] }] }
+          FLOW.scopedFilter([{ field_name: 'Status', operator: 'is', value: [CONFIG.STATUS_WAITING_MGR] }], mySites),
+          { fieldNames: ['STR Number', 'Site', 'Site Name', 'Type STR', 'Department', 'Requested By', 'Submit Date', 'Status'] }
         ).then(function(strRecords) {
           var list = strRecords
             .filter(function(r) {

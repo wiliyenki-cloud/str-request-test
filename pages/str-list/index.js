@@ -22,6 +22,9 @@ var _currentPage   = 1;
 var _pageSize      = 10;
 var _headerMap     = {};   // strNumber → mapped header record
 var _icoMap        = {};   // openId → [siteCode, ...]
+var _scopeSites = null;   // null = semua site, [] = tidak punya akses (diisi loadList)
+var STR_LIST_FIELDS = ['STR Number', 'Site', 'Site Name', 'Department', 'Status', 'Submit Date',
+                       'Plan Receive Date', 'PR Number', 'Requested By', 'Supplying Site'];
 
 function statusBadgeClass(status) {
   if (status === CONFIG.STATUS_WAITING_MGR) return 'badge-waiting-mgr';
@@ -230,25 +233,19 @@ function loadList() {
   getUserInfo().then(function(user) {
     if (typeof dbg === 'function') dbg('getUserInfo → openId=' + (user.openId || '(empty)') + ' nick=' + user.nickName);
 
-    var pSTR   = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, buildStrHeaderFilter());
     var pICO   = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.MASTER_ICO_TABLE_ID, null, CONFIG.MASTER_ICO_OPTS);
     var pSites = user.openId
       ? larkSearch(CONFIG.MASTER_BASE_APP_TOKEN, CONFIG.MASTER_SITE_TABLE_ID, null, CONFIG.MASTER_SITE_OPTS)
       : Promise.resolve([]);
 
-    Promise.all([pSTR, pSites, pICO]).then(function(results) {
-      var strRecords  = results[0];
-      var siteRecords = results[1];
-      var icoRecords  = results[2];
-
-      if (typeof dbg === 'function') dbg('STR records: ' + strRecords.length + ', site records: ' + siteRecords.length + ', ico records: ' + icoRecords.length);
-
-      // Build ICO map from Master Mapping ICO table
+    // Tahap 1: master (cache bersama di GAS). Tahap 2: header yang SUDAH dibatasi site.
+    Promise.all([pSites, pICO]).then(function(master) {
+      var siteRecords = master[0];
+      var icoRecords  = master[1];
       _icoMap = buildIcoMap(icoRecords);
-      if (typeof dbg === 'function') dbg('isICO=' + isICO(user.openId, _icoMap) + ' icoSites=[' + ((_icoMap[user.openId] || []).join(',')) + ']');
-
-      // Manager sites (only relevant if not ICO)
-      var mySites = !isICO(user.openId, _icoMap) ? siteRecords
+      _scopeSites = listScope(user, siteRecords, _icoMap);
+      var userIsICO = isICO(user.openId, _icoMap);
+      var mySites = !userIsICO ? siteRecords
         .filter(function(r) {
           var smUsers = r.fields[CONFIG.MASTER_SM_USER_FIELD];
           if (!smUsers) return false;
@@ -260,18 +257,26 @@ function loadList() {
         .map(function(r) { return fieldText(r.fields[CONFIG.MASTER_SITE_FIELD]); })
         .filter(Boolean) : [];
 
-      if (typeof dbg === 'function') dbg('mySites: [' + mySites.join(',') + ']');
+      if (typeof dbg === 'function') dbg('scope=' + (_scopeSites === null ? 'ALL' : '[' + _scopeSites.join(',') + ']') + ' mySites=[' + mySites.join(',') + ']');
 
-      _currentUser = user;
-      _mySites     = mySites;
-      var visibleRecords = applyFilter(strRecords, user, mySites, _icoMap);
-      _allRecords = mapRecords(visibleRecords);
-      // Build lookup map for Master Detail join; reset detail cache
-      _headerMap     = {};
-      _allRecords.forEach(function(h) { _headerMap[h.strNumber] = h; });
-      _detailsLoaded = false;
-      _allDetails    = [];
-      renderList(_allRecords);
+      var pSTR = (_scopeSites && _scopeSites.length === 0)
+        ? Promise.resolve([])   // tidak punya akses: jangan menarik apa pun
+        : larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
+            FLOW.scopedFilter(buildStrHeaderFilter().conditions, _scopeSites), { fieldNames: STR_LIST_FIELDS });
+
+      return pSTR.then(function(strRecords) {
+        if (typeof dbg === 'function') dbg('STR records: ' + strRecords.length + ', site records: ' + siteRecords.length + ', ico records: ' + icoRecords.length);
+        _currentUser = user;
+        _mySites     = mySites;
+        var visibleRecords = applyFilter(strRecords, user, mySites, _icoMap);
+        _allRecords = mapRecords(visibleRecords);
+        // Build lookup map for Master Detail join; reset detail cache
+        _headerMap     = {};
+        _allRecords.forEach(function(h) { _headerMap[h.strNumber] = h; });
+        _detailsLoaded = false;
+        _allDetails    = [];
+        renderList(_allRecords);
+      });
     }).catch(function(err) {
       if (typeof dbg === 'function') dbg('❌ fetch error: ' + (err.message || String(err)));
       document.getElementById('err-text').textContent = 'Gagal memuat: ' + (err.message || String(err));
