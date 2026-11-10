@@ -71,6 +71,7 @@ CONFIG.FLOW_V2 = false;
 CONFIG.STATUS_AFTER_APPROVE = CONFIG.STATUS_WAITING_ICO;   // alur lama
 
 CONFIG.TEST = {
+  GAS_URL:             'https://script.google.com/macros/s/AKfycbzUP288YnQrfwBzZF6R1B9X0bY0dxNdT5t4pAqtAeEaUd1agKssA1-UDVSZfmOXSD2HTQ/exec',
   STR_BASE_APP_TOKEN:  'HhCmbYqmjaYe5qsKTzdlYUasgyc',
   STR_HEADER_TABLE_ID: 'tbl2DtVsgkBGbwM7',
   STR_DETAIL_TABLE_ID: 'tblEqH8IRqBF3aZC',
@@ -94,6 +95,8 @@ CONFIG.TEST = {
 
   var T   = CONFIG.TEST;
   var DEV = CONFIG.DEV_USER_IDS[0];
+  // Mode uji memakai deployment GAS salinan (Code.gs baru), bukan GAS produksi.
+  CONFIG.GAS_URL             = T.GAS_URL;
   CONFIG.FLOW_V2             = true;
   CONFIG.STR_BASE_APP_TOKEN  = T.STR_BASE_APP_TOKEN;
   CONFIG.STR_HEADER_TABLE_ID = T.STR_HEADER_TABLE_ID;

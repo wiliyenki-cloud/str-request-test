@@ -72,3 +72,11 @@ test('nilai env selain test diabaikan', () => {
   const { CONFIG } = load('/str-request/lark-mini-app/pages/home/index.html', '?env=prod');
   assert.strictEqual(CONFIG.FLOW_V2, false);
 });
+
+test('GAS_URL: produksi tanpa env, salinan GAS hanya di ?env=test', () => {
+  const prod = load('/str-request/lark-mini-app/pages/home/index.html', '').CONFIG;
+  const uji  = load('/str-request/lark-mini-app/pages/home/index.html', '?env=test').CONFIG;
+  assert.ok(prod.GAS_URL.indexOf('AKfycbzrMwaLg05') !== -1, 'GAS produksi berubah');
+  assert.ok(uji.GAS_URL.indexOf('AKfycbzUP288') !== -1);
+  assert.notStrictEqual(uji.GAS_URL, prod.GAS_URL);
+});
