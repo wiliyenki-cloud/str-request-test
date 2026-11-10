@@ -20,4 +20,15 @@ function listScope(user, siteRecords, icoMap) {
   });
 }
 
-if (typeof module !== 'undefined') module.exports = listScope;
+// Tarik tabel detail per bulan dan per site (maksimal 2 panggilan paralel).
+// Mengembalikan Promise<Array> atau Promise.reject(Error) bila rentang lebih dari 6 bulan.
+function loadDetailRows(tableId, numberField, sites, fromMs, toMs) {
+  var filters = FLOW.detailFilters(numberField, sites, fromMs, toMs);
+  if (!filters) return Promise.reject(new Error('Pilih rentang tanggal paling lama 6 bulan.'));
+  var tasks = filters.map(function (f) {
+    return function () { return larkSearch(CONFIG.STR_BASE_APP_TOKEN, tableId, f); };
+  });
+  return FLOW.runLimited(tasks, 2).then(function (parts) { return [].concat.apply([], parts); });
+}
+
+if (typeof module !== 'undefined') { module.exports = listScope; module.exports.loadDetailRows = loadDetailRows; }

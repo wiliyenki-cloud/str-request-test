@@ -7,6 +7,7 @@ var _activeFilter = 'all';
 var _searchText   = '';
 var _currentUser  = { openId: '', nickName: 'User' };
 var _icoMap       = {};
+var _scopeSites   = null;   // null = semua site, [] = tidak punya akses (diisi loadData)
 
 function toDateInput(d) {
   var m = d.getMonth() + 1, day = d.getDate();
@@ -148,16 +149,24 @@ function loadData() {
   show('screen-loading');
   getUserInfo().then(function(user) {
     _currentUser = user;
-    var pHeaders = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID, buildAdjHeaderFilter());
-    var pDetails = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_DETAIL_TABLE_ID, null);
-    var pICO     = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.MASTER_ICO_TABLE_ID, null, CONFIG.MASTER_ICO_OPTS);
-    var pSites   = user.openId
+    var pICO   = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.MASTER_ICO_TABLE_ID, null, CONFIG.MASTER_ICO_OPTS);
+    var pSites = user.openId
       ? larkSearch(CONFIG.MASTER_BASE_APP_TOKEN, CONFIG.MASTER_SITE_TABLE_ID, null, CONFIG.MASTER_SITE_OPTS)
       : Promise.resolve([]);
 
-    Promise.all([pHeaders, pDetails, pICO, pSites]).then(function(res) {
-      var headers = res[0], details = res[1], icoRecords = res[2], siteRecords = res[3];
+    // Tahap 1: master (cache bersama di GAS). Tahap 2: header dan detail yang SUDAH dibatasi site dan bulan.
+    Promise.all([pSites, pICO]).then(function(master) {
+      var siteRecords = master[0], icoRecords = master[1];
       _icoMap = buildIcoMap(icoRecords);
+      _scopeSites = listScope(user, siteRecords, _icoMap);
+      if (_scopeSites && _scopeSites.length === 0) return [[], [], icoRecords, siteRecords];
+      var toMs = _dateTo ? dayEndMs(_dateTo) : Date.now();
+      var pHeaders = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID,
+        FLOW.scopedFilter(buildAdjHeaderFilter().conditions, _scopeSites));
+      var pDetails = loadDetailRows(CONFIG.ADJ_DETAIL_TABLE_ID, 'ADJ Number', _scopeSites, effectiveDateFromMs(), toMs);
+      return Promise.all([pHeaders, pDetails]).then(function(r) { return [r[0], r[1], icoRecords, siteRecords]; });
+    }).then(function(res) {
+      var headers = res[0], details = res[1], icoRecords = res[2], siteRecords = res[3];
 
       // Status filter: hanya Done (flow baru: ICO langsung Done, skip Need Posting)
       var allowedStatus = [CONFIG.STATUS_ADJ_DONE];

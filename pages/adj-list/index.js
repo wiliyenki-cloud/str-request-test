@@ -262,7 +262,8 @@ function loadList() {
 
 function loadDetails() {
   show('screen-loading');
-  larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_DETAIL_TABLE_ID, null)
+  loadDetailRows(CONFIG.ADJ_DETAIL_TABLE_ID, 'ADJ Number', _scopeSites,
+      effectiveDateFromMs(), _dateTo ? dayEndMs(_dateTo) : Date.now())
     .then(function(records) {
       var hdrKeys   = Object.keys(_headerMap);
       var hdrCount  = hdrKeys.length;

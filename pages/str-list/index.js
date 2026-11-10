@@ -293,7 +293,8 @@ function loadList() {
 
 function loadDetails() {
   show('screen-loading');
-  larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_DETAIL_TABLE_ID, null)
+  loadDetailRows(CONFIG.STR_DETAIL_TABLE_ID, 'STR Number', _scopeSites,
+      effectiveDateFromMs(), _dateTo ? dayEndMs(_dateTo) : Date.now())
     .then(function(records) {
       _allDetails = records.map(function(r) {
         var strNum = fieldText(r.fields['STR Number']);

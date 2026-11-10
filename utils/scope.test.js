@@ -36,3 +36,21 @@ test('ICO: site dari peta ICO, override ico = semua', () => {
   assert.strictEqual(listScope({ openId: 'i1' }, SITES, { i1: ['J1'] }), null);
   delete global.sessionStorage;
 });
+
+test('loadDetailRows: menolak rentang > 6 bulan tanpa memanggil jaringan', async () => {
+  let calls = 0;
+  global.larkSearch = () => { calls++; return Promise.resolve([]); };
+  const ms = (y, m, d) => new Date(y, m - 1, d).getTime();
+  await assert.rejects(listScope.loadDetailRows('T', 'STR Number', null, ms(2025, 1, 1), ms(2026, 11, 1)), /6 bulan/);
+  assert.strictEqual(calls, 0);
+});
+
+test('loadDetailRows: satu panggilan per bulan, hasil digabung', async () => {
+  global.CONFIG.STR_BASE_APP_TOKEN = 'tok';
+  const seen = [];
+  global.larkSearch = (token, table, filter) => { seen.push(filter.conditions[0].value[0]); return Promise.resolve([{ m: filter.conditions[0].value[0] }]); };
+  const ms = (y, m, d) => new Date(y, m - 1, d).getTime();
+  const rows = await listScope.loadDetailRows('T', 'STR Number', ['J1'], ms(2026, 10, 5), ms(2026, 11, 9));
+  assert.deepStrictEqual(seen, ['/10/2026', '/11/2026']);
+  assert.strictEqual(rows.length, 2);
+});
