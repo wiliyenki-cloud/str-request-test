@@ -136,19 +136,18 @@ function loadDetail() {
 document.getElementById('btn-approve').addEventListener('click', function() {
   if (_acting) return;
   setActing(true);
-  // Save Approval Qty per detail record (sequential to avoid JSONP conflicts)
+  // Simpan Approval Qty semua item dalam satu panggilan batch (jatuh ke satu-per-satu
+  // bila CONFIG.GAS_BATCH mati, lihat larkBatchUpdate di api.js).
   var rows = Array.prototype.slice.call(
     document.querySelectorAll('#items-table tbody tr[data-rid]')
   );
-  var chain = rows.reduce(function(p, row) {
-    return p.then(function() {
-      var qty = parseFloat(row.querySelector('.apv-qty-input').value) || 0;
-      return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_DETAIL_TABLE_ID, row.dataset.rid, {
-        'Approval Qty': qty
-      });
-    });
-  }, Promise.resolve());
-  chain.then(function() {
+  var records = rows.map(function(row) {
+    return {
+      record_id: row.dataset.rid,
+      fields: { 'Approval Qty': parseFloat(row.querySelector('.apv-qty-input').value) || 0 }
+    };
+  });
+  larkBatchUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_DETAIL_TABLE_ID, records).then(function() {
     return getUserInfo();
   }).then(function(user) {
     return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, _recordId, {
