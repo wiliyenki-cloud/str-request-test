@@ -47,6 +47,7 @@ function setActing(val) {
   _acting = val;
   document.getElementById('btn-send').disabled = val;
   document.getElementById('btn-start-reject').disabled = val;
+  Array.prototype.forEach.call(document.querySelectorAll('#bulk-actions button'), function(b) { b.disabled = val; });
   document.getElementById('btn-send').textContent = val ? 'Menyimpan...' : 'Kirim ke IP';
   document.getElementById('btn-confirm-reject').disabled = val || !document.getElementById('reject-reason').value.trim();
 }
@@ -96,6 +97,22 @@ function renderItems(items) {
     });
   });
 }
+
+// Aksi massal: samakan keputusan semua item. "Ubah semua" membuka kotak Qty MD di semua baris
+// (nilai awal = Apv Qty) supaya bisa diedit satu per satu. Event change dipicu agar kotak qty
+// ikut terbuka/terkunci lewat handler yang sama dengan pilihan per baris.
+function applyBulk(value) {
+  Array.prototype.forEach.call(document.querySelectorAll('#items-table select.md-dec'), function(sel) {
+    sel.value = value;
+    sel.dispatchEvent(new Event('change'));
+  });
+}
+
+document.getElementById('bulk-actions').addEventListener('click', function(ev) {
+  var b = ev.target.closest('button[data-bulk]');
+  if (!b || _acting) return;
+  applyBulk(b.getAttribute('data-bulk'));
+});
 
 function collectDecisions() {
   return Array.prototype.map.call(document.querySelectorAll('#items-table tbody tr'), function(tr) {
