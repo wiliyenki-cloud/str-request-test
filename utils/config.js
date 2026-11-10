@@ -65,6 +65,8 @@ CONFIG.MASTER_ICO_OPTS = {
 // (config.test.js menjaganya). Env uji bertahan selama sesi supaya tombol Home dan
 // redirect auth tidak diam-diam kembali ke produksi; keluar dengan membuka home
 // dengan ?env=prod (config.test.js menjaganya).
+// Aksi GAS larkBatchUpdate tersedia (nyalakan hanya setelah Code.gs baru ter-deploy).
+CONFIG.GAS_BATCH = false;
 CONFIG.FLOW_V2 = false;
 CONFIG.STATUS_AFTER_APPROVE = CONFIG.STATUS_WAITING_ICO;   // alur lama
 

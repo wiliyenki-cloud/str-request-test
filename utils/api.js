@@ -38,11 +38,16 @@ function jsonpFetchOnce(url) {
 // sebelum nyerah ke user, biar kontensi sesaat gak langsung jadi error di layar.
 var JSONP_RETRIES     = 2;
 var JSONP_RETRY_DELAY = 1200;
+// Jeda naik tiap percobaan dan diberi acak (jitter) supaya 30 klien yang gagal bersamaan
+// tidak mengulang di detik yang sama dan menjenuhkan GAS lagi.
+function jsonpRetryDelay(attempt) {
+  return JSONP_RETRY_DELAY * (attempt + 1) + Math.floor(Math.random() * 800);
+}
 function jsonpFetch(url, attempt) {
   attempt = attempt || 0;
   return jsonpFetchOnce(url).catch(function(err) {
     if (attempt >= JSONP_RETRIES) throw err;
-    return new Promise(function(resolve) { setTimeout(resolve, JSONP_RETRY_DELAY); })
+    return new Promise(function(resolve) { setTimeout(resolve, jsonpRetryDelay(attempt)); })
       .then(function() { return jsonpFetch(url, attempt + 1); });
   });
 }
@@ -137,4 +142,29 @@ function larkCreate(appToken, tableId, fields) {
     tableId: tableId,
     fields: JSON.stringify(fields)
   }).then(function(d) { return d.record || d; });
+}
+
+// larkBatchUpdate — ubah banyak record dalam satu panggilan GAS.
+// records: [{ record_id, fields }]. Dipotong 40 record per panggilan supaya URL GET tetap pendek.
+// Bila CONFIG.GAS_BATCH mati (GAS lama), jatuh ke larkUpdate satu per satu seperti sebelumnya.
+var LARK_BATCH_CHUNK = 40;
+function larkBatchUpdate(appToken, tableId, records) {
+  if (!records.length) return Promise.resolve({ updated: 0 });
+  if (!CONFIG.GAS_BATCH) {
+    return records.reduce(function(p, r) {
+      return p.then(function() { return larkUpdate(appToken, tableId, r.record_id, r.fields); });
+    }, Promise.resolve()).then(function() { return { updated: records.length }; });
+  }
+  var chunks = [];
+  for (var i = 0; i < records.length; i += LARK_BATCH_CHUNK) chunks.push(records.slice(i, i + LARK_BATCH_CHUNK));
+  return chunks.reduce(function(p, chunk) {
+    return p.then(function() {
+      return gasProxy({
+        action: 'larkBatchUpdate',
+        appToken: appToken,
+        tableId: tableId,
+        records: JSON.stringify(chunk)
+      });
+    });
+  }, Promise.resolve()).then(function() { return { updated: records.length }; });
 }
