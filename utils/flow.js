@@ -145,11 +145,77 @@ var FLOW = (function () {
     try { return sessionStorage.getItem('_roleOverride') || ''; } catch (e) { return ''; }
   }
 
+  // ── Cakupan data di server (untuk skala banyak store) ───────────────────────
+  var MAX_SCOPE_SITES   = 20;   // di atas ini filter site tidak dikirim (halaman tetap menyaring di klien)
+  var MAX_DETAIL_MONTHS = 6;    // rentang maksimal tarikan tabel detail
+
+  // Cakupan site untuk satu user. null = semua site, [] = tidak punya akses.
+  function scopeSites(o) {
+    if (o.isICO) return o.override === 'ico' ? null : (o.icoSites || []);
+    if (o.openId) return o.mySites || [];
+    return [];
+  }
+
+  // Filter header dengan cakupan site di server.
+  // sites null atau kosong = tanpa batas site (halaman yang memanggil harus menangani [] sendiri).
+  // INGAT: setiap field yang dipakai di conditions harus ikut di fieldNames, karena GAS
+  // menerapkan ulang conditions pada field hasil proyeksi (children tidak diterapkan ulang).
+  function scopedFilter(conditions, sites, fieldName) {
+    var f = { conjunction: 'and', conditions: conditions.slice() };
+    fieldName = fieldName || 'Site';
+    if (!sites || sites.length === 0 || sites.length > MAX_SCOPE_SITES) return f;
+    if (sites.length === 1) {
+      f.conditions.push({ field_name: fieldName, operator: 'is', value: [sites[0]] });
+      return f;
+    }
+    f.children = [{
+      conjunction: 'or',
+      conditions: sites.map(function (s) { return { field_name: fieldName, operator: 'is', value: [s] }; })
+    }];
+    return f;
+  }
+
+  // Penanda bulan '/MM/YYYY' yang tercakup rentang tanggal. null bila lebih dari maxMonths.
+  function monthMarkers(fromMs, toMs, maxMonths) {
+    var max = maxMonths || MAX_DETAIL_MONTHS;
+    var d = new Date(fromMs), end = new Date(toMs);
+    var y = d.getFullYear(), m = d.getMonth();
+    var out = [];
+    while (y < end.getFullYear() || (y === end.getFullYear() && m <= end.getMonth())) {
+      if (out.length >= max) return null;
+      out.push('/' + pad2(m + 1) + '/' + y);
+      m++;
+      if (m > 11) { m = 0; y++; }
+    }
+    return out;
+  }
+
+  // Filter tabel detail: satu filter per bulan, dibatasi site lewat teks nomor dokumen
+  // ('NNN/SITE/DEPT/MM/YYYY'). null bila rentang lebih dari maxMonths.
+  function detailFilters(numberField, sites, fromMs, toMs, maxMonths) {
+    var markers = monthMarkers(fromMs, toMs, maxMonths);
+    if (!markers) return null;
+    var scoped = !!sites && sites.length > 0 && sites.length <= MAX_SCOPE_SITES;
+    return markers.map(function (mk) {
+      var f = { conjunction: 'and', conditions: [{ field_name: numberField, operator: 'contains', value: [mk] }] };
+      if (scoped && sites.length === 1) {
+        f.conditions.push({ field_name: numberField, operator: 'contains', value: ['/' + sites[0] + '/'] });
+      } else if (scoped) {
+        f.children = [{
+          conjunction: 'or',
+          conditions: sites.map(function (s) { return { field_name: numberField, operator: 'contains', value: ['/' + s + '/'] }; })
+        }];
+      }
+      return f;
+    });
+  }
+
   return {
     S: S, CSV_COLS: CSV_COLS,
     parseMdReview: parseMdReview, serializeMdReview: serializeMdReview,
     finalQty: finalQty, validateMdDecisions: validateMdDecisions, statusAfterMd: statusAfterMd,
     buildCsv: buildCsv, dummyRpa: dummyRpa, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited,
+    scopeSites: scopeSites, scopedFilter: scopedFilter, monthMarkers: monthMarkers, detailFilters: detailFilters,
     roleOverride: roleOverride
   };
 })();

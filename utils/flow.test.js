@@ -209,3 +209,66 @@ test('roleOverride: kosong bila getItem melempar error', () => {
     delete global.sessionStorage;
   }
 });
+
+test('scopeSites: ICO, manager, anonim', () => {
+  assert.strictEqual(FLOW.scopeSites({ isICO: true, override: 'ico', icoSites: ['A'] }), null);
+  assert.deepStrictEqual(FLOW.scopeSites({ isICO: true, override: '', icoSites: ['A', 'B'] }), ['A', 'B']);
+  assert.deepStrictEqual(FLOW.scopeSites({ isICO: true, override: '' }), []);
+  assert.deepStrictEqual(FLOW.scopeSites({ isICO: false, openId: 'u1', mySites: ['J1'] }), ['J1']);
+  assert.deepStrictEqual(FLOW.scopeSites({ isICO: false, openId: 'u1' }), []);
+  assert.deepStrictEqual(FLOW.scopeSites({ isICO: false, openId: '', mySites: ['J1'] }), []);
+});
+
+test('scopedFilter: tanpa site, satu site, banyak site, terlalu banyak site', () => {
+  const base = [{ field_name: 'Status', operator: 'is', value: ['X'] }];
+  assert.deepStrictEqual(FLOW.scopedFilter(base, null), { conjunction: 'and', conditions: base });
+  assert.deepStrictEqual(FLOW.scopedFilter(base, []), { conjunction: 'and', conditions: base });
+
+  const one = FLOW.scopedFilter(base, ['J347']);
+  assert.deepStrictEqual(one.conditions[1], { field_name: 'Site', operator: 'is', value: ['J347'] });
+  assert.strictEqual(one.children, undefined);
+  assert.strictEqual(base.length, 1, 'conditions asli tidak boleh berubah');
+
+  const two = FLOW.scopedFilter(base, ['J347', 'J999']);
+  assert.strictEqual(two.conditions.length, 1);
+  assert.deepStrictEqual(two.children, [{ conjunction: 'or', conditions: [
+    { field_name: 'Site', operator: 'is', value: ['J347'] },
+    { field_name: 'Site', operator: 'is', value: ['J999'] }
+  ] }]);
+
+  const many = [];
+  for (let i = 0; i < 21; i++) many.push('S' + i);
+  const big = FLOW.scopedFilter(base, many);
+  assert.strictEqual(big.children, undefined);
+  assert.strictEqual(big.conditions.length, 1);
+});
+
+test('monthMarkers', () => {
+  const ms = (y, m, d) => new Date(y, m - 1, d).getTime();
+  assert.deepStrictEqual(FLOW.monthMarkers(ms(2026, 11, 1), ms(2026, 11, 9)), ['/11/2026']);
+  assert.deepStrictEqual(FLOW.monthMarkers(ms(2026, 11, 20), ms(2027, 1, 3)), ['/11/2026', '/12/2026', '/01/2027']);
+  assert.strictEqual(FLOW.monthMarkers(ms(2026, 1, 1), ms(2026, 6, 30)).length, 6);
+  assert.strictEqual(FLOW.monthMarkers(ms(2026, 1, 1), ms(2026, 7, 1)), null);
+  assert.deepStrictEqual(FLOW.monthMarkers(ms(2026, 1, 1), ms(2026, 3, 1), 2), null);
+  // rentang terbalik lintas bulan = kosong; dalam bulan yang sama tetap satu penanda
+  assert.deepStrictEqual(FLOW.monthMarkers(ms(2026, 6, 1), ms(2026, 5, 1)), []);
+  assert.deepStrictEqual(FLOW.monthMarkers(ms(2026, 5, 9), ms(2026, 5, 1)), ['/05/2026']);
+});
+
+test('detailFilters: per bulan, dibatasi site lewat nomor dokumen', () => {
+  const ms = (y, m, d) => new Date(y, m - 1, d).getTime();
+  const all = FLOW.detailFilters('STR Number', null, ms(2026, 10, 1), ms(2026, 11, 9));
+  assert.deepStrictEqual(all, [
+    { conjunction: 'and', conditions: [{ field_name: 'STR Number', operator: 'contains', value: ['/10/2026'] }] },
+    { conjunction: 'and', conditions: [{ field_name: 'STR Number', operator: 'contains', value: ['/11/2026'] }] }
+  ]);
+  const one = FLOW.detailFilters('STR Number', ['J999'], ms(2026, 11, 1), ms(2026, 11, 9));
+  assert.deepStrictEqual(one, [{ conjunction: 'and', conditions: [
+    { field_name: 'STR Number', operator: 'contains', value: ['/11/2026'] },
+    { field_name: 'STR Number', operator: 'contains', value: ['/J999/'] }
+  ] }]);
+  const two = FLOW.detailFilters('ADJ Number', ['J1', 'J2'], ms(2026, 11, 1), ms(2026, 11, 9));
+  assert.strictEqual(two[0].conditions.length, 1);
+  assert.deepStrictEqual(two[0].children[0].conditions.map((c) => c.value[0]), ['/J1/', '/J2/']);
+  assert.strictEqual(FLOW.detailFilters('STR Number', null, ms(2024, 11, 1), ms(2026, 11, 9)), null);
+});
