@@ -7,6 +7,7 @@ var _activeFilter = 'all';
 var _searchText   = '';
 var _currentUser  = { openId: '', nickName: 'User' };
 var _icoMap       = {};
+var _detailClamped = false;  // true bila rentang detail dipotong ke 6 bulan terakhir
 var _scopeSites   = null;   // null = semua site, [] = tidak punya akses (diisi loadData)
 
 function toDateInput(d) {
@@ -163,7 +164,10 @@ function loadData() {
       var toMs = _dateTo ? dayEndMs(_dateTo) : Date.now();
       var pHeaders = larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.ADJ_HEADER_TABLE_ID,
         FLOW.scopedFilter(buildAdjHeaderFilter().conditions, _scopeSites));
-      var pDetails = loadDetailRows(CONFIG.ADJ_DETAIL_TABLE_ID, 'ADJ Number', _scopeSites, effectiveDateFromMs(), toMs);
+      var detailFrom = FLOW.clampRangeStart(effectiveDateFromMs(), toMs);
+      _detailClamped = detailFrom !== effectiveDateFromMs();
+      if (_detailClamped && typeof dbg === 'function') dbg('detail dibatasi 6 bulan terakhir');
+      var pDetails = loadDetailRows(CONFIG.ADJ_DETAIL_TABLE_ID, 'ADJ Number', _scopeSites, detailFrom, toMs);
       return Promise.all([pHeaders, pDetails]).then(function(r) { return [r[0], r[1], icoRecords, siteRecords]; });
     }).then(function(res) {
       var headers = res[0], details = res[1], icoRecords = res[2], siteRecords = res[3];
@@ -245,7 +249,8 @@ function applyFilters(rows) {
 
 function render() {
   var rows = applyFilters(_allRows);
-  document.getElementById('result-count').textContent = rows.length + ' baris article';
+  document.getElementById('result-count').textContent = rows.length + ' baris article' +
+    (_detailClamped ? ' • Detail ADJ dibatasi 6 bulan terakhir' : '');
   if (rows.length === 0) { show('screen-empty'); return; }
 
   var thead = '<thead><tr>' +

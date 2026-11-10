@@ -190,6 +190,16 @@ var FLOW = (function () {
     return out;
   }
 
+  // Awal rentang yang dipakai untuk tarikan detail: fromMs bila rentang <= maxMonths bulan kalender,
+  // selain itu tanggal 1 pukul 00:00 (waktu lokal) pada bulan ke-(maxMonths-1) sebelum bulan toMs.
+  function clampRangeStart(fromMs, toMs, maxMonths) {
+    var max = maxMonths || MAX_DETAIL_MONTHS;
+    var f = new Date(fromMs), t = new Date(toMs);
+    var span = (t.getFullYear() - f.getFullYear()) * 12 + (t.getMonth() - f.getMonth()) + 1;
+    if (span <= max) return fromMs;
+    return new Date(t.getFullYear(), t.getMonth() - (max - 1), 1, 0, 0, 0, 0).getTime();
+  }
+
   // Filter tabel detail: satu filter per bulan, dibatasi site lewat teks nomor dokumen
   // ('NNN/SITE/DEPT/MM/YYYY'). null bila rentang lebih dari maxMonths.
   function detailFilters(numberField, sites, fromMs, toMs, maxMonths) {
@@ -215,7 +225,7 @@ var FLOW = (function () {
     parseMdReview: parseMdReview, serializeMdReview: serializeMdReview,
     finalQty: finalQty, validateMdDecisions: validateMdDecisions, statusAfterMd: statusAfterMd,
     buildCsv: buildCsv, dummyRpa: dummyRpa, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited,
-    scopeSites: scopeSites, scopedFilter: scopedFilter, monthMarkers: monthMarkers, detailFilters: detailFilters,
+    scopeSites: scopeSites, scopedFilter: scopedFilter, monthMarkers: monthMarkers, detailFilters: detailFilters, clampRangeStart: clampRangeStart,
     roleOverride: roleOverride
   };
 })();

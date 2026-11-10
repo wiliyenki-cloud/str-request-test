@@ -272,3 +272,11 @@ test('detailFilters: per bulan, dibatasi site lewat nomor dokumen', () => {
   assert.deepStrictEqual(two[0].children[0].conditions.map((c) => c.value[0]), ['/J1/', '/J2/']);
   assert.strictEqual(FLOW.detailFilters('STR Number', null, ms(2024, 11, 1), ms(2026, 11, 9)), null);
 });
+
+test('clampRangeStart: rentang lebih dari 6 bulan dipotong ke awal bulan ke-6 terakhir', () => {
+  const ms = (y, m, d) => new Date(y, m - 1, d).getTime();
+  assert.strictEqual(FLOW.clampRangeStart(ms(2026, 1, 1), ms(2026, 6, 30)), ms(2026, 1, 1));
+  assert.strictEqual(FLOW.clampRangeStart(ms(2024, 11, 1), ms(2026, 11, 9)), ms(2026, 6, 1));
+  assert.strictEqual(FLOW.clampRangeStart(ms(2026, 5, 9), ms(2026, 5, 1)), ms(2026, 5, 9));
+  assert.strictEqual(FLOW.clampRangeStart(ms(2026, 1, 15), ms(2026, 11, 9), 3), ms(2026, 9, 1));
+});
