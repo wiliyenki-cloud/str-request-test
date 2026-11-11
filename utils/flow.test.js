@@ -301,3 +301,40 @@ test('siteOptions: site unik terurut dengan nama', () => {
   ]);
   assert.deepStrictEqual(o, [{ site: 'H001', label: 'H001 — Batam' }, { site: 'J999', label: 'J999 — Jakarta Test' }]);
 });
+
+test('koliCheck: vektor bersama', () => {
+  const c = (q, k) => FLOW.koliCheck(q, k);
+  assert.deepStrictEqual(c(4, 2), { ok: true });
+  assert.deepStrictEqual(c(5, 2), { ok: false, lower: 4, upper: 6, error: 'Qty harus kelipatan 2 (terdekat: 4 atau 6)' });
+  assert.deepStrictEqual(c(1, 5), { ok: false, lower: 0, upper: 5, error: 'Qty harus kelipatan 5 (terdekat: 5)' });
+  assert.deepStrictEqual(c(0, 5), { ok: true });
+  assert.deepStrictEqual(c(7, 1), { ok: true });
+  assert.deepStrictEqual(c(7, 0), { ok: true });
+  assert.deepStrictEqual(c(7, ''), { ok: true });
+  assert.deepStrictEqual(c(7, undefined), { ok: true });
+  assert.deepStrictEqual(c(NaN, 3), { ok: true });
+  assert.deepStrictEqual(c(90, 90), { ok: true });
+  const r = c(91, 90);
+  assert.deepStrictEqual([r.ok, r.lower, r.upper], [false, 90, 180]);
+});
+
+test('validateApprovalQtys', () => {
+  assert.deepStrictEqual(FLOW.validateApprovalQtys([]), { ok: true, error: '' });
+  assert.deepStrictEqual(FLOW.validateApprovalQtys([{ seq: 1, qty: 4, koli: 2 }, { seq: 2, qty: 0, koli: 5 }, { seq: 3, qty: 7 }]),
+    { ok: true, error: '' });
+  assert.deepStrictEqual(FLOW.validateApprovalQtys([{ seq: 1, qty: 4, koli: 2 }, { seq: 2, qty: 5, koli: 2 }, { seq: 3, qty: 1, koli: 5 }]),
+    { ok: false, error: 'Item 2: Qty harus kelipatan 2 (terdekat: 4 atau 6)' });
+});
+
+test('validateMdDecisions memakai Koli hanya untuk keputusan qty', () => {
+  const items = [{ seq: 1, requestQty: 5, approvalQty: 5, koli: 2 }, { seq: 2, requestQty: 4, approvalQty: 4 }];
+  let v = FLOW.validateMdDecisions(items, [{ seq: 1, d: 'qty', q: '6' }, { seq: 2, d: 'qty', q: '3' }]);
+  assert.deepStrictEqual([v.ok, v.kept], [true, 2]);
+  v = FLOW.validateMdDecisions(items, [{ seq: 1, d: 'qty', q: '5' }, { seq: 2, d: 'ok' }]);
+  assert.strictEqual(v.ok, false);
+  assert.strictEqual(v.error, 'Item 1: Qty harus kelipatan 2 (terdekat: 4 atau 6)');
+  v = FLOW.validateMdDecisions(items, [{ seq: 1, d: 'ok' }, { seq: 2, d: 'ok' }]);
+  assert.strictEqual(v.ok, true);
+  v = FLOW.validateMdDecisions(items, [{ seq: 1, d: 'qty', q: '0' }, { seq: 2, d: 'reject' }]);
+  assert.strictEqual(v.ok, true);
+});

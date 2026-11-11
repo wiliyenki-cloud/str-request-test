@@ -80,3 +80,9 @@ test('GAS_URL: produksi tanpa env, salinan GAS hanya di ?env=test', () => {
   assert.ok(uji.GAS_URL.indexOf('AKfycbzUP288') !== -1);
   assert.notStrictEqual(uji.GAS_URL, prod.GAS_URL);
 });
+
+test('KOLI_FIELD: mati di produksi, menyala hanya di ?env=test', () => {
+  assert.strictEqual(load('/x/pages/home/index.html', '').CONFIG.KOLI_FIELD, false);
+  assert.strictEqual(load('/x/pages/home/index.html', '?env=test').CONFIG.KOLI_FIELD, true);
+  assert.strictEqual(load('/x/pages/md-detail/index.html', '', { _env: 'test' }).CONFIG.KOLI_FIELD, true);
+});

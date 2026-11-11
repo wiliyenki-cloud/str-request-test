@@ -47,7 +47,27 @@ var FLOW = (function () {
     return approvedQty(item);
   }
 
-  // items: [{seq, requestQty, approvalQty}], decisions: [{seq, d, q}]
+  // Aturan kelipatan Koli (sama dengan pureKoliCheck di google-apps-script/Pure.gs).
+  function koliCheck(qty, koli) {
+    var k = Number(koli);
+    k = (isFinite(k) && k >= 1 && Math.floor(k) === k) ? k : 1;
+    var q = Number(qty);
+    if (k === 1 || !isFinite(q) || q % k === 0) return { ok: true };
+    var lower = Math.floor(q / k) * k, upper = lower + k;
+    return { ok: false, lower: lower, upper: upper,
+      error: 'Qty harus kelipatan ' + k + ' (terdekat: ' + (lower > 0 ? lower + ' atau ' + upper : upper) + ')' };
+  }
+
+  // items: [{seq, qty, koli}] -> kegagalan item pertama; qty 0 lolos.
+  function validateApprovalQtys(items) {
+    for (var i = 0; i < items.length; i++) {
+      var chk = koliCheck(items[i].qty, items[i].koli);
+      if (!chk.ok) return { ok: false, error: 'Item ' + items[i].seq + ': ' + chk.error };
+    }
+    return { ok: true, error: '' };
+  }
+
+  // items: [{seq, requestQty, approvalQty, koli?}], decisions: [{seq, d, q}]
   function validateMdDecisions(items, decisions) {
     var kept = 0;
     for (var i = 0; i < items.length; i++) {
@@ -65,6 +85,8 @@ var FLOW = (function () {
         if (dec.q == null || String(dec.q).trim() === '' || !isFinite(q) || Math.floor(q) !== q || q < 0 || q > 999) {
           return { ok: false, error: 'Qty item ' + it.seq + ' harus bilangan bulat 0 sampai 999', kept: 0 };
         }
+        var kc = koliCheck(q, it.koli);
+        if (!kc.ok) return { ok: false, error: 'Item ' + it.seq + ': ' + kc.error, kept: 0 };
         qty = q;
       } else if (dec.d === 'reject') {
         qty = 0;
@@ -246,7 +268,7 @@ var FLOW = (function () {
   return {
     S: S, CSV_COLS: CSV_COLS,
     parseMdReview: parseMdReview, serializeMdReview: serializeMdReview,
-    finalQty: finalQty, validateMdDecisions: validateMdDecisions, statusAfterMd: statusAfterMd,
+    finalQty: finalQty, koliCheck: koliCheck, validateApprovalQtys: validateApprovalQtys, validateMdDecisions: validateMdDecisions, statusAfterMd: statusAfterMd,
     buildCsv: buildCsv, dummyRpa: dummyRpa, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited, filterItems: filterItems, siteOptions: siteOptions,
     scopeSites: scopeSites, scopedFilter: scopedFilter, monthMarkers: monthMarkers, detailFilters: detailFilters, clampRangeStart: clampRangeStart,
     roleOverride: roleOverride

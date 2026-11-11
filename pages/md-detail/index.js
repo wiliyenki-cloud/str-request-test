@@ -2,6 +2,8 @@ var HEADER_FIELDS = ['STR Number', 'Site', 'Site Name', 'Type STR', 'Supplying S
                      'Plan Receive Date', 'Requested By', 'Submit Date', 'Status'];
 var DETAIL_FIELDS = ['STR Number', 'Row Sequence', 'Article', 'Description', 'Stock Qty', 'Stock DC',
                      'Sales Qty', 'Suggested Qty', 'Request Qty', 'Approval Qty', 'Reason'];
+// Field 'Koli' hanya ada di Base uji; di produksi daftar field tidak berubah.
+if (CONFIG.KOLI_FIELD) DETAIL_FIELDS.push('Koli');
 
 var _recordId  = '';
 var _strNumber = '';
@@ -54,6 +56,10 @@ function setActing(val) {
 
 function num(v) { return v != null ? v : ''; }
 
+function koliTag(k) {
+  return k > 1 ? '<div class="koli-tag">Koli ' + escHtml(String(k)) + '</div>' : '';
+}
+
 function renderHeader(h) {
   var rows = [
     ['STR Number', h.strNumber, true],
@@ -80,13 +86,13 @@ function renderItems(items) {
   var tbody = '<tbody>' + items.map(function(it) {
     var apv = it.approvalQty !== '' ? it.approvalQty : it.requestQty;
     return '<tr data-seq="' + escHtml(it.seq) + '">' +
-      '<td>' + escHtml(it.seq) + '</td><td>' + escHtml(it.article) + '</td><td>' + escHtml(it.description) + '</td>' +
+      '<td>' + escHtml(it.seq) + '</td><td>' + escHtml(it.article) + '</td><td>' + escHtml(it.description) + koliTag(it.koli) + '</td>' +
       '<td class="num">' + escHtml(String(it.stockQty)) + '</td><td class="num">' + escHtml(String(it.stockDc)) + '</td>' +
       '<td class="num">' + escHtml(String(it.salesQty)) + '</td><td class="num">' + escHtml(String(it.suggestedQty)) + '</td>' +
       '<td class="num">' + escHtml(String(apv)) + '</td>' +
       '<td><select class="md-dec"><option value="">Pilih</option><option value="ok">Setuju</option>' +
         '<option value="qty">Ubah qty</option><option value="reject">Tolak</option></select></td>' +
-      '<td><input type="number" class="md-qty" min="0" max="999" disabled value="' + escHtml(String(apv)) + '"></td>' +
+      '<td><input type="number" class="md-qty" min="' + (it.koli > 1 ? it.koli : 0) + '" max="999"' + (it.koli > 1 ? ' step="' + it.koli + '"' : '') + ' disabled value="' + escHtml(String(apv)) + '"></td>' +
       '</tr>';
   }).join('') + '</tbody>';
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
@@ -159,7 +165,8 @@ function loadDetail() {
         salesQty:     num(r.fields['Sales Qty']),
         suggestedQty: num(r.fields['Suggested Qty']),
         requestQty:   num(r.fields['Request Qty']),
-        approvalQty:  num(r.fields['Approval Qty'])
+        approvalQty:  num(r.fields['Approval Qty']),
+        koli:         num(r.fields['Koli']) > 1 ? Number(r.fields['Koli']) : 1
       };
     }));
     document.getElementById('footer-main').style.display = '';

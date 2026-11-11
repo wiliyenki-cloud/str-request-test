@@ -68,6 +68,8 @@ CONFIG.MASTER_ICO_OPTS = {
 // Aksi GAS larkBatchUpdate tersedia (nyalakan hanya setelah Code.gs baru ter-deploy).
 CONFIG.GAS_BATCH = false;
 CONFIG.FLOW_V2 = false;
+// Field 'Koli' di STR Detail hanya ada di Base uji; di produksi tidak boleh diminta.
+CONFIG.KOLI_FIELD = false;
 CONFIG.STATUS_AFTER_APPROVE = CONFIG.STATUS_WAITING_ICO;   // alur lama
 
 CONFIG.TEST = {
@@ -98,6 +100,7 @@ CONFIG.TEST = {
   // Mode uji memakai deployment GAS salinan (Code.gs baru), bukan GAS produksi.
   CONFIG.GAS_URL             = T.GAS_URL;
   CONFIG.FLOW_V2             = true;
+  CONFIG.KOLI_FIELD          = true;
   CONFIG.STR_BASE_APP_TOKEN  = T.STR_BASE_APP_TOKEN;
   CONFIG.STR_HEADER_TABLE_ID = T.STR_HEADER_TABLE_ID;
   CONFIG.STR_DETAIL_TABLE_ID = T.STR_DETAIL_TABLE_ID;

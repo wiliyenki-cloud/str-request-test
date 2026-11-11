@@ -61,6 +61,10 @@ function renderHeader(h) {
     }).join('');
 }
 
+function koliTag(k) {
+  return k > 1 ? '<div class="koli-tag">Koli ' + escHtml(String(k)) + '</div>' : '';
+}
+
 function renderItems(items) {
   _detailItems = items;
   document.getElementById('items-title').textContent = 'Item List (' + items.length + ')';
@@ -69,11 +73,11 @@ function renderItems(items) {
     return '<tr data-rid="' + escHtml(it.recordId) + '">' +
       '<td>' + escHtml(it.seq) + '</td>' +
       '<td>' + escHtml(it.article) + '</td>' +
-      '<td>' + escHtml(it.description) + '</td>' +
+      '<td>' + escHtml(it.description) + koliTag(it.koli) + '</td>' +
       '<td class="num">' + escHtml(it.stockQty) + '</td>' +
       '<td class="num">' + escHtml(it.salesQty) + '</td>' +
       '<td class="num">' + escHtml(it.requestQty) + '</td>' +
-      '<td class="num"><input type="number" class="apv-qty-input" min="0" value="' + escHtml(String(it.requestQty !== '' ? it.requestQty : 0)) + '"></td>' +
+      '<td class="num"><input type="number" class="apv-qty-input" min="' + (it.koli > 1 ? it.koli : 0) + '"' + (it.koli > 1 ? ' step="' + it.koli + '"' : '') + ' value="' + escHtml(String(it.requestQty !== '' ? it.requestQty : 0)) + '"></td>' +
       '<td>' + escHtml(it.reason) + '</td></tr>';
   }).join('') + '</tbody>';
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
@@ -120,7 +124,9 @@ function loadDetail() {
         stockQty:    r.fields['Stock Qty']     != null ? r.fields['Stock Qty'] : '',
         salesQty:    r.fields['Sales Qty']     != null ? r.fields['Sales Qty'] : '',
         requestQty:  r.fields['Request Qty']   != null ? r.fields['Request Qty'] : '',
-        reason:      fieldText(r.fields['Reason'])
+        reason:      fieldText(r.fields['Reason']),
+        // larkSearch halaman ini tanpa fieldNames; Koli hanya dibaca di mode uji (di produksi field-nya tidak ada).
+        koli:        (CONFIG.KOLI_FIELD && Number(r.fields['Koli']) > 1) ? Number(r.fields['Koli']) : 1
       };
     }));
 
@@ -135,6 +141,12 @@ function loadDetail() {
 // Approve: simpan Approval Qty tiap item → Status 'Waiting Create by ICO'
 document.getElementById('btn-approve').addEventListener('click', function() {
   if (_acting) return;
+  // Aturan kelipatan Koli: periksa sebelum ada update yang terkirim.
+  var kv = FLOW.validateApprovalQtys(_detailItems.map(function(it) {
+    var row = document.querySelector('#items-table tbody tr[data-rid="' + it.recordId + '"]');
+    return { seq: it.seq, qty: parseFloat(row.querySelector('.apv-qty-input').value) || 0, koli: it.koli };
+  }));
+  if (!kv.ok) { showToast(kv.error, '#c62828'); return; }
   setActing(true);
   // Simpan Approval Qty semua item dalam satu panggilan batch (jatuh ke satu-per-satu
   // bila CONFIG.GAS_BATCH mati, lihat larkBatchUpdate di api.js).
