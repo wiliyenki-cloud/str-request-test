@@ -112,17 +112,29 @@ var FLOW = (function () {
   }
 
   // header: {strNumber, site, kodeVendor, planReceiveMs}; items: [{seq, article, description, requestQty, approvalQty}]
-  function buildCsv(header, items, review) {
+  // pgrMap (opsional): { <kode huruf kecil>: purchasing group } dari master artikel; tanpa peta kolom Purchasing Group kosong.
+  function pgrOf(it, pgrMap) {
+    return (pgrMap && pgrMap[String(it.article).trim().toLowerCase()]) || '';
+  }
+
+  function buildCsv(header, items, review, pgrMap) {
     var rows = [];
     items.forEach(function (it) {
       var qty = finalQty(it, review);
       if (qty <= 0) return;
       rows.push([
         'ZNB1', '', '', it.article, it.description, qty, ddmmyyyy(header.planReceiveMs),
-        header.site, '1000', '', 'RJ20', '', header.kodeVendor, 'Y1', header.strNumber
+        header.site, '1000', pgrOf(it, pgrMap), 'RJ20', '', header.kodeVendor, 'Y1', header.strNumber
       ].map(csvCell).join(','));
     });
     return [CSV_COLS.join(',')].concat(rows).join('\r\n');
+  }
+
+  // Kode artikel (qty final > 0) yang tidak punya PGR di pgrMap.
+  function csvMissingPgr(items, review, pgrMap) {
+    return items.filter(function (it) {
+      return finalQty(it, review) > 0 && !pgrOf(it, pgrMap);
+    }).map(function (it) { return it.article; });
   }
 
   function hash(s) {
@@ -269,7 +281,7 @@ var FLOW = (function () {
     S: S, CSV_COLS: CSV_COLS,
     parseMdReview: parseMdReview, serializeMdReview: serializeMdReview,
     finalQty: finalQty, koliCheck: koliCheck, validateApprovalQtys: validateApprovalQtys, validateMdDecisions: validateMdDecisions, statusAfterMd: statusAfterMd,
-    buildCsv: buildCsv, dummyRpa: dummyRpa, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited, filterItems: filterItems, siteOptions: siteOptions,
+    buildCsv: buildCsv, csvMissingPgr: csvMissingPgr, dummyRpa: dummyRpa, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited, filterItems: filterItems, siteOptions: siteOptions,
     scopeSites: scopeSites, scopedFilter: scopedFilter, monthMarkers: monthMarkers, detailFilters: detailFilters, clampRangeStart: clampRangeStart,
     roleOverride: roleOverride
   };

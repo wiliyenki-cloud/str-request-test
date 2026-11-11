@@ -37,12 +37,12 @@ function escHtml(str) {
 
 function fmtDate(ms) { if (!ms) return '-'; return new Date(ms).toLocaleDateString('id-ID'); }
 
-function showToast(msg, color) {
+function showToast(msg, color, ms) {
   var t = document.getElementById('toast');
   t.textContent = msg;
   t.style.background = color || '#333';
   t.style.display = '';
-  setTimeout(function() { t.style.display = 'none'; }, 2500);
+  setTimeout(function() { t.style.display = 'none'; }, ms || 2500);
 }
 
 function setActing(val) {
@@ -99,14 +99,49 @@ function renderItems() {
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
 }
 
-function downloadCsv() {
-  var csv = '﻿' + FLOW.buildCsv(_header, _items, _review);
+function downloadCsv(pgrMap) {
+  var csv = '﻿' + FLOW.buildCsv(_header, _items, _review, pgrMap);
   var a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
   a.download = _strNumber.replace(/[\\/:*?"<>|&]+/g, '-') + '-PR.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+// Ambil Purchasing Group (PGR) dari master artikel lewat GAS, per 100 kode. Hasil: { <kode huruf kecil>: pgr }.
+function fetchPgrMap() {
+  var seen = {}, codes = [];
+  _items.forEach(function(it) {
+    var c = String(it.article || '').trim();
+    if (c && FLOW.finalQty(it, _review) > 0 && !seen[c.toLowerCase()]) { seen[c.toLowerCase()] = true; codes.push(c); }
+  });
+  var chunks = [];
+  for (var i = 0; i < codes.length; i += 100) chunks.push(codes.slice(i, i + 100));
+  return Promise.all(chunks.map(function(ch) {
+    return gasProxy({ action: 'articlePgr', codes: ch.join(',') });
+  })).then(function(results) {
+    var map = {};
+    results.forEach(function(d) {
+      var m = (d && d.pgr) || {};
+      Object.keys(m).forEach(function(k) { map[k] = m[k]; });
+    });
+    return map;
+  });
+}
+
+// Ambil PGR, lalu unduh CSV. Gagal ambil PGR = tidak mengunduh (reject). Hasil: daftar artikel tanpa PGR.
+function prepareAndDownloadCsv() {
+  return fetchPgrMap().catch(function() {
+    throw new Error('Gagal membaca Purchasing Group dari master artikel, coba lagi.');
+  }).then(function(pgrMap) {
+    downloadCsv(pgrMap);
+    return FLOW.csvMissingPgr(_items, _review, pgrMap);
+  });
+}
+
+function missingPgrMessage(missing) {
+  return 'Purchasing Group kosong untuk artikel: ' + missing.slice(0, 5).join(', ') + (missing.length > 5 ? ' (+' + (missing.length - 5) + ' lainnya)' : '');
 }
 
 function keptCount() {
@@ -174,11 +209,16 @@ document.getElementById('btn-make-csv').addEventListener('click', function() {
   if (_acting) return;
   if (keptCount() === 0) { showToast('Tidak ada item dengan Qty final lebih dari 0.', '#c62828'); return; }
   setActing(true);
-  downloadCsv();
-  larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, _recordId, { 'Status': FLOW.S.CSV_READY })
+  var missing = [];
+  prepareAndDownloadCsv()
+    .then(function(m) {
+      missing = m;
+      return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, _recordId, { 'Status': FLOW.S.CSV_READY });
+    })
     .then(function() {
       setActing(false);
-      showToast('CSV dibuat. Isi nomor PR setelah upload ke SAP.', '#2e7d32');
+      if (missing.length) showToast('CSV dibuat. ' + missingPgrMessage(missing) + '. Lengkapi manual sebelum upload ke SAP.', '#ef6c00', 7000);
+      else showToast('CSV dibuat. Isi nomor PR setelah upload ke SAP.', '#2e7d32');
       loadDetail();
     }).catch(function(err) {
       showToast('Gagal: ' + (err.message || err), '#c62828');
@@ -188,7 +228,14 @@ document.getElementById('btn-make-csv').addEventListener('click', function() {
 
 document.getElementById('btn-csv-again').addEventListener('click', function() {
   if (_acting) return;
-  downloadCsv();
+  setActing(true);
+  prepareAndDownloadCsv().then(function(missing) {
+    setActing(false);
+    if (missing.length) showToast(missingPgrMessage(missing), '#ef6c00', 7000);
+  }).catch(function(err) {
+    showToast(err.message || String(err), '#c62828');
+    setActing(false);
+  });
 });
 
 document.getElementById('pr-number-input').addEventListener('input', function() {

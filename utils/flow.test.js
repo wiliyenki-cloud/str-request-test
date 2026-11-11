@@ -338,3 +338,32 @@ test('validateMdDecisions memakai Koli hanya untuk keputusan qty', () => {
   v = FLOW.validateMdDecisions(items, [{ seq: 1, d: 'qty', q: '0' }, { seq: 2, d: 'reject' }]);
   assert.strictEqual(v.ok, true);
 });
+
+test('buildCsv: kolom Purchasing Group diisi dari pgrMap (kunci kode huruf kecil), kosong bila tak ada', () => {
+  const header = { strNumber: 'S1', site: 'J1', kodeVendor: 'V1', planReceiveMs: new Date(2026, 10, 20).getTime() };
+  const items = [
+    { seq: 1, article: ' 10432739 ', description: 'a', requestQty: 1, approvalQty: 1 },
+    { seq: 2, article: 'ABC-1', description: 'b', requestQty: 2, approvalQty: 2 },
+    { seq: 3, article: '10559370', description: 'c', requestQty: 3, approvalQty: 3 },
+    { seq: 4, article: '10709927', description: 'd', requestQty: 4, approvalQty: 4 }
+  ];
+  const map = { '10432739': 'J15', 'abc-1': 'J33', '10709927': 'J10' };
+  const lines = FLOW.buildCsv(header, items, { 4: { d: 'reject' } }, map).split('\r\n');
+  assert.strictEqual(lines.length, 4);   // item 4 (tolak) tidak ikut
+  assert.strictEqual(lines[1].split(',')[9], 'J15');
+  assert.strictEqual(lines[2].split(',')[9], 'J33');
+  assert.strictEqual(lines[3].split(',')[9], '');   // tidak ada di peta
+  assert.strictEqual(FLOW.buildCsv(header, items, {}).split('\r\n')[1].split(',')[9], '');   // tanpa peta = seperti sebelumnya
+});
+
+test('csvMissingPgr: kode dengan qty final > 0 yang tak punya PGR', () => {
+  const items = [
+    { seq: 1, article: '10432739', requestQty: 1, approvalQty: 1 },
+    { seq: 2, article: 'ABC-1', requestQty: 2, approvalQty: 2 },
+    { seq: 3, article: '10559370', requestQty: 3, approvalQty: 3 },
+    { seq: 4, article: '777', requestQty: 0, approvalQty: 0 }
+  ];
+  assert.deepStrictEqual(FLOW.csvMissingPgr(items, { 3: { d: 'reject' } }, { '10432739': 'J15' }), ['ABC-1']);
+  assert.deepStrictEqual(FLOW.csvMissingPgr(items, {}, { '10432739': 'J15', 'abc-1': 'J33', '10559370': 'J1' }), []);
+  assert.deepStrictEqual(FLOW.csvMissingPgr(items, {}, undefined), ['10432739', 'ABC-1', '10559370']);
+});
