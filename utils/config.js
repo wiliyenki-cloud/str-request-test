@@ -70,6 +70,9 @@ CONFIG.GAS_BATCH = false;
 CONFIG.FLOW_V2 = false;
 // Field 'Koli' di STR Detail hanya ada di Base uji; di produksi tidak boleh diminta.
 CONFIG.KOLI_FIELD = false;
+// Site tambahan yang boleh di-approve oleh open_id tertentu. Kosong di produksi; di mode uji akun developer
+// jadi manager site uji (Master Site produksi tidak boleh diubah, dan J999 dkk. tidak ada di sana).
+CONFIG.MANAGER_SITE_OVERRIDE = {};
 CONFIG.STATUS_AFTER_APPROVE = CONFIG.STATUS_WAITING_ICO;   // alur lama
 
 CONFIG.TEST = {
@@ -113,4 +116,5 @@ CONFIG.TEST = {
   // Akun developer dipakai untuk semua peran supaya satu orang bisa menguji seluruh alur.
   CONFIG.MD_MAP = { 'Sofa & Chair': [DEV], 'Bedroom': [DEV], 'Kitchen': [DEV] };
   CONFIG.IP_USER_IDS = [DEV];
+  CONFIG.MANAGER_SITE_OVERRIDE[DEV] = ['J999', 'J347', 'J752', 'J218'];
 })();

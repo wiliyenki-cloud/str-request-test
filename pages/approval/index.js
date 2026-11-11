@@ -54,6 +54,10 @@ function loadList() {
           .map(function(r) { return fieldText(r.fields[CONFIG.MASTER_SITE_FIELD]); })
           .filter(Boolean);
 
+        // Hanya terisi di mode uji (lihat CONFIG.MANAGER_SITE_OVERRIDE); di produksi daftarnya kosong.
+        var extraSites = (openId && CONFIG.MANAGER_SITE_OVERRIDE && CONFIG.MANAGER_SITE_OVERRIDE[openId]) || [];
+        extraSites.forEach(function(s) { if (mySites.indexOf(s) === -1) mySites.push(s); });
+
         if (mySites.length === 0) { show('screen-empty'); return; }
 
         // Dibatasi site Manager di server dan hanya kolom yang dipakai kartu (Status dan Site

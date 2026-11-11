@@ -86,3 +86,12 @@ test('KOLI_FIELD: mati di produksi, menyala hanya di ?env=test', () => {
   assert.strictEqual(load('/x/pages/home/index.html', '?env=test').CONFIG.KOLI_FIELD, true);
   assert.strictEqual(load('/x/pages/md-detail/index.html', '', { _env: 'test' }).CONFIG.KOLI_FIELD, true);
 });
+
+test('MANAGER_SITE_OVERRIDE: kosong di produksi, akun developer jadi manager site uji hanya di ?env=test', () => {
+  const prod = load('/x/pages/home/index.html', '').CONFIG;
+  assert.deepStrictEqual(prod.MANAGER_SITE_OVERRIDE, {});
+  const uji = load('/x/pages/home/index.html', '?env=test').CONFIG;
+  const dev = uji.DEV_USER_IDS[0];
+  assert.deepStrictEqual(uji.MANAGER_SITE_OVERRIDE[dev], ['J999', 'J347', 'J752', 'J218']);
+  assert.strictEqual(Object.keys(uji.MANAGER_SITE_OVERRIDE).length, 1);
+});
