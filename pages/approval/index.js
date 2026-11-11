@@ -41,22 +41,7 @@ function loadList() {
     // Fetch MASTER SITE to find which sites this manager handles
     larkSearch(CONFIG.MASTER_BASE_APP_TOKEN, CONFIG.MASTER_SITE_TABLE_ID, null, CONFIG.MASTER_SITE_OPTS)
       .then(function(siteRecords) {
-        var mySites = siteRecords
-          .filter(function(r) {
-            if (!openId) return false; // anonymous → no sites
-            var smUsers = r.fields[CONFIG.MASTER_SM_USER_FIELD];
-            if (!smUsers) return false;
-            var arr = Array.isArray(smUsers) ? smUsers : [smUsers];
-            return arr.some(function(u) {
-              return (u.id || u.open_id || u.openId) === openId;
-            });
-          })
-          .map(function(r) { return fieldText(r.fields[CONFIG.MASTER_SITE_FIELD]); })
-          .filter(Boolean);
-
-        // Hanya terisi di mode uji (lihat CONFIG.MANAGER_SITE_OVERRIDE); di produksi daftarnya kosong.
-        var extraSites = (openId && CONFIG.MANAGER_SITE_OVERRIDE && CONFIG.MANAGER_SITE_OVERRIDE[openId]) || [];
-        extraSites.forEach(function(s) { if (mySites.indexOf(s) === -1) mySites.push(s); });
+        var mySites = managerSitesOf(user, siteRecords);
 
         if (mySites.length === 0) { show('screen-empty'); return; }
 

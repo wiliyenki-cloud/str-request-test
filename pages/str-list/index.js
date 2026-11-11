@@ -245,17 +245,7 @@ function loadList() {
       _icoMap = buildIcoMap(icoRecords);
       _scopeSites = listScope(user, siteRecords, _icoMap);
       var userIsICO = isICO(user.openId, _icoMap);
-      var mySites = !userIsICO ? siteRecords
-        .filter(function(r) {
-          var smUsers = r.fields[CONFIG.MASTER_SM_USER_FIELD];
-          if (!smUsers) return false;
-          var arr = Array.isArray(smUsers) ? smUsers : [smUsers];
-          return arr.some(function(u) {
-            return (u.id || u.open_id || u.openId) === user.openId;
-          });
-        })
-        .map(function(r) { return fieldText(r.fields[CONFIG.MASTER_SITE_FIELD]); })
-        .filter(Boolean) : [];
+      var mySites = !userIsICO ? managerSitesOf(user, siteRecords) : [];
 
       if (typeof dbg === 'function') dbg('scope=' + (_scopeSites === null ? 'ALL' : '[' + _scopeSites.join(',') + ']') + ' mySites=[' + mySites.join(',') + ']');
 

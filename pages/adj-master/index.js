@@ -191,15 +191,7 @@ function loadData() {
           visible = headers.filter(function(h) { return icoSites.indexOf(fieldText(h.fields['Site'])) !== -1; });
         }
       } else if (user.openId) {
-        var mySites = siteRecords
-          .filter(function(r) {
-            var sm = r.fields[CONFIG.MASTER_SM_USER_FIELD];
-            if (!sm) return false;
-            var arr = Array.isArray(sm) ? sm : [sm];
-            return arr.some(function(u) { return (u.id || u.open_id || u.openId) === user.openId; });
-          })
-          .map(function(r) { return fieldText(r.fields[CONFIG.MASTER_SITE_FIELD]); })
-          .filter(Boolean);
+        var mySites = managerSitesOf(user, siteRecords);
         visible = mySites.length > 0
           ? headers.filter(function(h) { return mySites.indexOf(fieldText(h.fields['Site'])) !== -1; })
           : [];

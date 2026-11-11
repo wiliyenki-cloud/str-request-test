@@ -54,3 +54,16 @@ test('loadDetailRows: satu panggilan per bulan, hasil digabung', async () => {
   assert.deepStrictEqual(seen, ['/10/2026', '/11/2026']);
   assert.strictEqual(rows.length, 2);
 });
+test('managerSitesOf: site dari Master Site, ditambah override mode uji tanpa duplikat', () => {
+  const managerSitesOf = require('./scope.js').managerSitesOf;
+  assert.deepStrictEqual(managerSitesOf({ openId: 'u1' }, SITES), ['J1', 'J2']);
+  assert.deepStrictEqual(managerSitesOf({ openId: '' }, SITES), []);
+  global.CONFIG.MANAGER_SITE_OVERRIDE = { u9: ['J999', 'J1'], u1: ['J2', 'J999'] };
+  try {
+    assert.deepStrictEqual(managerSitesOf({ openId: 'u9' }, SITES), ['J999', 'J1']);          // bukan manager di master, hanya override
+    assert.deepStrictEqual(managerSitesOf({ openId: 'u1' }, SITES), ['J1', 'J2', 'J999']);    // gabungan tanpa duplikat
+    icoFlag = false;
+    assert.deepStrictEqual(listScope({ openId: 'u9' }, SITES, {}), ['J999', 'J1']);           // daftar STR ikut override
+  } finally { delete global.CONFIG.MANAGER_SITE_OVERRIDE; }
+  assert.deepStrictEqual(managerSitesOf({ openId: 'u9' }, SITES), []);                         // produksi: tidak ada override
+});

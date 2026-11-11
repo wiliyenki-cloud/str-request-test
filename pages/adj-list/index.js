@@ -207,17 +207,7 @@ function loadList() {
       var siteRecords = results[1];
       var icoRecords  = results[2];
 
-      var mySites = !isICO(user.openId, _icoMap)
-        ? siteRecords
-            .filter(function(r) {
-              var smUsers = r.fields[CONFIG.MASTER_SM_USER_FIELD];
-              if (!smUsers) return false;
-              var arr = Array.isArray(smUsers) ? smUsers : [smUsers];
-              return arr.some(function(u) { return (u.id || u.open_id || u.openId) === user.openId; });
-            })
-            .map(function(r) { return fieldText(r.fields[CONFIG.MASTER_SITE_FIELD]); })
-            .filter(Boolean)
-        : [];
+      var mySites = !isICO(user.openId, _icoMap) ? managerSitesOf(user, siteRecords) : [];
 
       _currentUser = user;
       _mySites     = mySites;
