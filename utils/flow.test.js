@@ -79,12 +79,18 @@ test('buildCsv: 15 kolom, nilai otomatis, item tolak tidak ikut', () => {
   assert.strictEqual(lines[1], 'ZNB1,,,10045821,"Sofa 3 Seater, Abu",10,20.11.2026,J347,1000,,RJ20,,6100000005,Y1,T001/J347/Sofa & Chair/11/2026');
 });
 
-test('dummyRpa deterministik dan konsisten', () => {
+test('dummyRpa deterministik dan berbentuk RPA Data', () => {
   const a = FLOW.dummyRpa('J347', '10045821');
   const b = FLOW.dummyRpa('J347', '10045821');
   assert.deepStrictEqual(a, b);
-  assert.ok(a.stockQty >= 0 && a.stockDc >= 100 && a.salesQty >= 8);
-  assert.strictEqual(a.suggestedQty, Math.max(0, a.salesQty - a.stockQty));
+  assert.strictEqual(a.v, 1);
+  assert.ok(a.stok.store >= 0 && a.stok.store <= 39);
+  assert.ok(a.stok.dc.H001 >= 100 && a.stok.dc.H014 >= 100);
+  assert.strictEqual(a.koli, 1);
+  assert.strictEqual(a.pgr, 'J99');
+  assert.deepStrictEqual([a.rr, a.ds, a.fm], ['', '', '']);
+  assert.deepStrictEqual(Object.keys(a.pipe).sort(), ['giBelumGr', 'odBelumGi', 'prBelumPo', 'soBelumOd']);
+  assert.deepStrictEqual(FLOW.parseRpaData(JSON.stringify(a)), a);
 });
 
 test('mdDepartmentsFor', () => {
@@ -108,20 +114,51 @@ test('runLimited menghormati batas dan menjaga urutan', async () => {
 });
 
 test('dummyRpa tidak pernah negatif dan tetap dalam rentang', () => {
-  const r0 = FLOW.dummyRpa('J60', 'A60');
-  assert.ok(r0.stockDc >= 100 && r0.stockDc <= 499, 'stockDc: ' + r0.stockDc);
   let n = 0;
   for (let i = 0; i < 20; i++) {
     for (let j = 0; j < 10; j++) {
       const r = FLOW.dummyRpa('J' + i * 7, 'A' + j * 13 + i);
       n++;
-      assert.ok(r.stockQty >= 0 && r.stockQty <= 39, 'stockQty ' + r.stockQty);
-      assert.ok(r.stockDc >= 100 && r.stockDc <= 499, 'stockDc ' + r.stockDc);
-      assert.ok(r.salesQty >= 8 && r.salesQty <= 57, 'salesQty ' + r.salesQty);
-      assert.strictEqual(r.suggestedQty, Math.max(0, r.salesQty - r.stockQty));
+      assert.ok(r.stok.store >= 0 && r.stok.store <= 39, 'store ' + r.stok.store);
+      assert.ok(r.stok.rdc >= 0 && r.stok.splt >= 0);
+      assert.ok(r.stok.dc.H001 >= 100 && r.stok.dc.H001 <= 499, 'H001 ' + r.stok.dc.H001);
+      assert.ok(r.stok.dc.H014 >= 100 && r.stok.dc.H014 <= 499, 'H014 ' + r.stok.dc.H014);
+      assert.ok(r.avg3 >= 2.67 && r.avg3 <= 19, 'avg3 ' + r.avg3);
+      assert.strictEqual(r.avg3, Math.round(r.avg3 * 100) / 100);
+      Object.keys(r.pipe).forEach((k) => assert.ok(r.pipe[k] >= 0 && r.pipe[k] <= 9, k));
     }
   }
   assert.strictEqual(n, 200);
+});
+
+test('parseRpaData: defensif dan melengkapi bagian yang hilang', () => {
+  assert.strictEqual(FLOW.parseRpaData(''), null);
+  assert.strictEqual(FLOW.parseRpaData(null), null);
+  assert.strictEqual(FLOW.parseRpaData('bukan json'), null);
+  assert.strictEqual(FLOW.parseRpaData('{"v":2}'), null);
+  assert.strictEqual(FLOW.parseRpaData('{}'), null);
+  assert.strictEqual(FLOW.parseRpaData('[1]'), null);
+  assert.deepStrictEqual(FLOW.parseRpaData('{"v":1}'), { v: 1, stok: { store: 0, rdc: 0, splt: 0, dc: {} },
+    pipe: { prBelumPo: 0, soBelumOd: 0, odBelumGi: 0, giBelumGr: 0 }, avg3: 0, koli: 1, pgr: '', rr: '', ds: '', fm: '' });
+  const r = FLOW.parseRpaData('{"v":1,"stok":{"store":"5","splt":"x","dc":{"H001":"7","H014":3}},"pipe":{"prBelumPo":"2"},"avg3":"1.5","koli":"6","pgr":"J15","rr":"a"}');
+  assert.strictEqual(r.stok.store, 5);
+  assert.strictEqual(r.stok.splt, 0);
+  assert.deepStrictEqual(r.stok.dc, { H001: 7, H014: 3 });
+  assert.strictEqual(r.pipe.prBelumPo, 2);
+  assert.strictEqual(r.avg3, 1.5);
+  assert.strictEqual(r.koli, 6);
+  assert.strictEqual(r.pgr, 'J15');
+  assert.strictEqual(r.rr, 'a');
+  assert.strictEqual(FLOW.parseRpaData('{"v":1,"koli":0}').koli, 1);
+});
+
+test('rpaDcStock: kolom DC sesuai site pemasok, tanpa peduli huruf', () => {
+  const rpa = FLOW.parseRpaData('{"v":1,"stok":{"dc":{"H001":12,"H014":0}}}');
+  assert.strictEqual(FLOW.rpaDcStock(rpa, 'H001'), 12);
+  assert.strictEqual(FLOW.rpaDcStock(rpa, 'h014'), 0);
+  assert.strictEqual(FLOW.rpaDcStock(rpa, 'H999'), null);
+  assert.strictEqual(FLOW.rpaDcStock(rpa, ''), null);
+  assert.strictEqual(FLOW.rpaDcStock(null, 'H001'), null);
 });
 
 test('buildCsv: sel dengan kutip, newline, dan \\r tunggal di-quote', () => {

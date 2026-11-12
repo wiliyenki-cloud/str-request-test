@@ -143,12 +143,56 @@ var FLOW = (function () {
     return h;
   }
 
-  // Data RPA karangan untuk uji. Di produksi RPA STR yang menulis nilai ini.
+  // Data RPA karangan untuk uji, bentuk sama dengan kolom RPA Data. Di produksi GAS menyalin hasil RPA dari sheet.
   function dummyRpa(site, article) {
     var h = hash(site + '|' + article);
-    var stock = h % 40;
     var sales = 8 + (h >>> 3) % 50;
-    return { stockQty: stock, stockDc: 100 + (h >>> 5) % 400, salesQty: sales, suggestedQty: Math.max(0, sales - stock) };
+    return {
+      v: 1,
+      stok: { store: h % 40, rdc: (h >>> 7) % 60, splt: (h >>> 9) % 30,
+        dc: { H001: 100 + (h >>> 5) % 400, H014: 100 + (h >>> 11) % 400 } },
+      pipe: { prBelumPo: (h >>> 13) % 10, soBelumOd: (h >>> 15) % 10, odBelumGi: (h >>> 17) % 10, giBelumGr: (h >>> 19) % 10 },
+      avg3: Math.round(sales / 3 * 100) / 100,
+      koli: 1, pgr: 'J99', rr: '', ds: '', fm: ''
+    };
+  }
+
+  function rpaNum(v) {
+    var n = Number(String(v == null ? '' : v).replace(/[s,]/g, ''));
+    return isFinite(n) ? n : 0;
+  }
+
+  // Urai teks JSON kolom RPA Data. Kosong, rusak, atau v bukan 1 -> null. Bagian yang hilang diisi bawaan.
+  function parseRpaData(text) {
+    var o;
+    try { o = JSON.parse(String(text == null ? '' : text)); } catch (e) { return null; }
+    if (!o || typeof o !== 'object' || o.v !== 1) return null;
+    var stok = o.stok && typeof o.stok === 'object' ? o.stok : {};
+    var pipe = o.pipe && typeof o.pipe === 'object' ? o.pipe : {};
+    var dcIn = stok.dc && typeof stok.dc === 'object' ? stok.dc : {};
+    var dc = {};
+    Object.keys(dcIn).forEach(function (k) { dc[k] = rpaNum(dcIn[k]); });
+    var koli = rpaNum(o.koli);
+    function txt(v) { return v == null ? '' : String(v); }
+    return {
+      v: 1,
+      stok: { store: rpaNum(stok.store), rdc: rpaNum(stok.rdc), splt: rpaNum(stok.splt), dc: dc },
+      pipe: { prBelumPo: rpaNum(pipe.prBelumPo), soBelumOd: rpaNum(pipe.soBelumOd), odBelumGi: rpaNum(pipe.odBelumGi), giBelumGr: rpaNum(pipe.giBelumGr) },
+      avg3: rpaNum(o.avg3),
+      koli: (koli >= 1 && Math.floor(koli) === koli) ? koli : 1,
+      pgr: txt(o.pgr), rr: txt(o.rr), ds: txt(o.ds), fm: txt(o.fm)
+    };
+  }
+
+  // Stok kolom DC bernama sama dengan site pemasok (tanpa peduli huruf besar/kecil); kolom tidak ada -> null.
+  function rpaDcStock(rpa, supplyingSite) {
+    var want = String(supplyingSite == null ? '' : supplyingSite).trim().toLowerCase();
+    if (!rpa || !rpa.stok || !rpa.stok.dc || !want) return null;
+    var keys = Object.keys(rpa.stok.dc);
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i].toLowerCase() === want) return rpa.stok.dc[keys[i]];
+    }
+    return null;
   }
 
   // Saring daftar di sisi layar: o.q = teks bebas (nomor STR, kode site, nama site), o.site = kode site persis.
@@ -281,7 +325,7 @@ var FLOW = (function () {
     S: S, CSV_COLS: CSV_COLS,
     parseMdReview: parseMdReview, serializeMdReview: serializeMdReview,
     finalQty: finalQty, koliCheck: koliCheck, validateApprovalQtys: validateApprovalQtys, validateMdDecisions: validateMdDecisions, statusAfterMd: statusAfterMd,
-    buildCsv: buildCsv, csvMissingPgr: csvMissingPgr, dummyRpa: dummyRpa, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited, filterItems: filterItems, siteOptions: siteOptions,
+    buildCsv: buildCsv, csvMissingPgr: csvMissingPgr, dummyRpa: dummyRpa, parseRpaData: parseRpaData, rpaDcStock: rpaDcStock, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited, filterItems: filterItems, siteOptions: siteOptions,
     scopeSites: scopeSites, scopedFilter: scopedFilter, monthMarkers: monthMarkers, detailFilters: detailFilters, clampRangeStart: clampRangeStart,
     roleOverride: roleOverride
   };
