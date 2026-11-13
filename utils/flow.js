@@ -158,7 +158,7 @@ var FLOW = (function () {
   }
 
   function rpaNum(v) {
-    var n = Number(String(v == null ? '' : v).replace(/[s,]/g, ''));
+    var n = Number(String(v == null ? '' : v).replace(/[\s,]/g, ''));
     return isFinite(n) ? n : 0;
   }
 

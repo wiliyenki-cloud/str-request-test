@@ -431,3 +431,11 @@ test('csvMissingPgr: kode dengan qty final > 0 yang tak punya PGR', () => {
   assert.deepStrictEqual(FLOW.csvMissingPgr(items, {}, { '10432739': 'J15', 'abc-1': 'J33', '10559370': 'J1' }), []);
   assert.deepStrictEqual(FLOW.csvMissingPgr(items, {}, undefined), ['10432739', 'ABC-1', '10559370']);
 });
+
+test('parseRpaData: angka berformat (spasi dan koma ribuan) terbaca, teks biasa jadi 0', () => {
+  const r = FLOW.parseRpaData(JSON.stringify({ v: 1, stok: { store: '  1,023', rdc: 'seratus', splt: '5 0', dc: {} }, avg3: ' 2.5 ' }));
+  assert.strictEqual(r.stok.store, 1023);
+  assert.strictEqual(r.stok.rdc, 0);        // huruf 's' tidak boleh ikut terbuang lalu terbaca sebagai angka
+  assert.strictEqual(r.stok.splt, 50);
+  assert.strictEqual(r.avg3, 2.5);
+});
