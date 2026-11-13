@@ -15,6 +15,18 @@
     .filter-row select { flex: 1; min-width: 0; }
     .result-count { font-size: 12px; color: #888; margin: 0 0 6px; }
     .btn-more { display: block; margin: 4px auto 0; background: #fff; border: 1px solid #d0d0d0; border-radius: 6px; padding: 8px 18px; font-size: 13px; cursor: pointer; }
+    .bulk-bar { position: sticky; top: 0; z-index: 5; background: #f5f6f8; padding: 8px 0; margin: 0 0 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border-bottom: 1px solid #e3e3e3; }
+    .bulk-bar .sel-count { font-size: 13px; font-weight: 600; margin-right: auto; }
+    .bulk-bar button { border: 1px solid #d0d0d0; background: #fff; border-radius: 6px; padding: 7px 10px; font-size: 13px; cursor: pointer; }
+    .bulk-bar button.primary { background: #1976d2; border-color: #1976d2; color: #fff; }
+    .bulk-bar button:disabled { opacity: .5; cursor: default; }
+    .bulk-status { font-size: 12.5px; white-space: pre-line; margin: 0 0 8px; color: #333; }
+    .bulk-status.err { color: #c62828; }
+    .bulk-status.warn { color: #ef6c00; }
+    .bulk-status.ok { color: #2e7d32; }
+    .cb-wrap { display: inline-flex; align-items: center; padding: 4px 8px 4px 0; cursor: pointer; }
+    .cb-wrap input { width: 18px; height: 18px; margin: 0; cursor: pointer; }
+    .card-left { display: flex; align-items: center; min-width: 0; }
   </style>
 </head>
 <body>
@@ -36,6 +48,7 @@
         <select id="site-select" title="Site"><option value="">Semua site</option></select>
       </div>
     </div>
+    <div id="bulk-status" class="bulk-status" style="display:none"></div>
     <div id="screen-loading" class="center-msg"><p>Memuat data...</p></div>
     <div id="screen-error" class="center-msg" style="display:none">
       <p id="err-text" class="err-text"></p>
@@ -45,6 +58,13 @@
       <p id="empty-text">Tidak ada STR yang perlu diproses.</p>
     </div>
     <div id="screen-list" style="display:none">
+      <div class="bulk-bar" id="bulk-bar">
+        <span id="sel-count" class="sel-count">0 dipilih</span>
+        <button type="button" id="btn-sel-ready">Pilih semua yang siap</button>
+        <button type="button" id="btn-sel-clear">Kosongkan</button>
+        <button type="button" id="btn-bulk-sel" class="primary" disabled>Buat CSV (0)</button>
+        <button type="button" id="btn-bulk-all" class="primary" disabled>Buat semua yang belum dibuat (0)</button>
+      </div>
       <div id="list-container" class="list"></div>
     </div>
   </div>
@@ -54,6 +74,7 @@
   <script src="../../utils/api.js?v=13"></script>
   <script src="../../utils/debug.js?v=4"></script>
   <script src="../../utils/flow.js?v=24"></script>
-  <script src="index.js?v=3"></script>
+  <script src="../../utils/ipbulk.js?v=1"></script>
+  <script src="index.js?v=4"></script>
 </body>
 </html>
