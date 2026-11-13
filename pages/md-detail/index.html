@@ -18,6 +18,7 @@
     .rpa-toggle { border: 0; background: none; color: #1565c0; font-size: 12px; padding: 0 4px; cursor: pointer; }
     .rpa-extra td { background: #f5f8ff; padding: 6px 8px; }
     .rpa-chip { display: inline-block; margin: 2px 6px 2px 0; padding: 1px 8px; font-size: 11px; color: #333; background: #e3ecfb; border-radius: 10px; }
+    .pill-dead { display: inline-block; background: #ffebee; color: #c62828; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
     .note { font-size: 12px; color: #888; margin-top: 8px; }
   </style>
 </head>
@@ -41,6 +42,7 @@
         </div>
         <div class="table-wrap" id="items-table"></div>
         <div class="note">Kolom stok mengikuti sheet RPA STR (Stok Toko, RDC, SPLT, dan tiap DC), begitu juga Jual 3 bln; bukan isian PS. Tanda ▸ membuka detail pipeline lain. Tanda - berarti hasil RPA belum tersedia.</div>
+        <div class="note" id="sales-note" style="display:none">Jual 3 bln berasal dari sheet RPA STR; Deadstock berasal dari DATA MASTER. Kolom Deadstock kosong berarti bukan deadstock, tanda - berarti belum ada data.</div>
       </div>
       <div class="section" id="section-reject" style="display:none">
         <div class="section-title">Alasan Tolak STR *</div>
@@ -58,11 +60,11 @@
     </div>
   </div>
   <script src="https://lf1-cdn-tos.bytegoofy.com/goofy/lark/op/h5-js-sdk-1.5.20.js"></script>
-  <script src="../../utils/config.js?v=24"></script>
+  <script src="../../utils/config.js?v=25"></script>
   <script src="../../utils/auth.js?v=21"></script>
   <script src="../../utils/api.js?v=13"></script>
   <script src="../../utils/debug.js?v=3"></script>
-  <script src="../../utils/flow.js?v=24"></script>
-  <script src="index.js?v=23"></script>
+  <script src="../../utils/flow.js?v=25"></script>
+  <script src="index.js?v=24"></script>
 </body>
 </html>

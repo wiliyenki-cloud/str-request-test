@@ -3,6 +3,8 @@ var HEADER_FIELDS = ['STR Number', 'Site', 'Site Name', 'Type STR', 'Supplying S
 var DETAIL_FIELDS = ['STR Number', 'Row Sequence', 'Article', 'Description', 'Request Qty', 'Approval Qty'];
 // Field 'RPA Data' (hasil RPA STR) hanya ada di Base uji; di produksi tidak diminta.
 if (CONFIG.RPA_DATA_FIELD) DETAIL_FIELDS.push('RPA Data');
+// Field 'Deadstock' (dari DATA MASTER) hanya ada di Base uji; di produksi tidak diminta.
+if (CONFIG.SALES_FIELDS) DETAIL_FIELDS.push('Deadstock');
 
 var _recordId  = '';
 var _strNumber = '';
@@ -126,12 +128,19 @@ function rpaExtraRow(sum, colspan) {
   }).join('') + '</td></tr>';
 }
 
+// Sel Deadstock: pil merah bila deadstock, '-' bila tanpa informasi, kosong bila bukan deadstock.
+function deadCell(sd) {
+  return '<td>' + (sd.dead ? '<span class="pill-dead">Deadstock</span>' : escHtml(sd.deadLabel)) + '</td>';
+}
+
 function renderItems() {
   document.getElementById('items-title').textContent = 'Item List (' + _items.length + ')';
   var dcCodes = dcCodesOf(_items);
-  var colCount = 3 + 3 + dcCodes.length + 1 + 4; // #/Article/Description + Toko/RDC/SPLT + DC + Jual 3 bln + Req/Apv/MD/Final
+  var sales = !!CONFIG.SALES_FIELDS;
+  document.getElementById('sales-note').style.display = sales ? '' : 'none';
+  var colCount = 3 + 3 + dcCodes.length + 1 + (sales ? 1 : 0) + 4; // #/Article/Description + Toko/RDC/SPLT + DC + Jual 3 bln + [Deadstock] + Req/Apv/MD/Final
   var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th>' + stockHeads(dcCodes) +
-    '<th class="num">Jual 3 bln</th><th class="num">Req</th><th class="num">Apv</th><th>MD</th><th class="num">Final</th></tr></thead>';
+    '<th class="num">Jual 3 bln</th>' + (sales ? '<th>Deadstock</th>' : '') + '<th class="num">Req</th><th class="num">Apv</th><th>MD</th><th class="num">Final</th></tr></thead>';
   var tbody = '<tbody>' + _items.map(function(it) {
     var fq = FLOW.finalQty(it, _review);
     var apv = it.approvalQty !== '' ? it.approvalQty : it.requestQty;
@@ -139,6 +148,7 @@ function renderItems() {
     var toggle = sum && sum.extras.length ? ' <button type="button" class="rpa-toggle" title="Detail RPA">&#9656;</button>' : '';
     return '<tr><td>' + escHtml(it.seq) + toggle + '</td><td>' + escHtml(it.article) + '</td><td>' + escHtml(it.description) + '</td>' +
       stockCells(sum, dcCodes) + '<td class="num">' + rpaCell(sum && sum.avg3) + '</td>' +
+      (sales ? deadCell(FLOW.salesDisplay(sum ? sum.avg3 : null, it.deadText)) : '') +
       '<td class="num">' + escHtml(String(it.requestQty)) + '</td><td class="num">' + escHtml(String(apv)) + '</td>' +
       '<td>' + mdLabel(it.seq) + '</td>' +
       '<td class="num' + (fq === 0 ? ' zero' : '') + '">' + fq + '</td></tr>' + rpaExtraRow(sum, colCount);
@@ -240,7 +250,8 @@ function loadDetail() {
         description: fieldText(r.fields['Description']),
         requestQty:  r.fields['Request Qty']  != null ? r.fields['Request Qty']  : '',
         approvalQty: r.fields['Approval Qty'] != null ? r.fields['Approval Qty'] : '',
-        rpa:         FLOW.parseRpaData(fieldText(r.fields['RPA Data']))
+        rpa:         FLOW.parseRpaData(fieldText(r.fields['RPA Data'])),
+        deadText:    CONFIG.SALES_FIELDS ? fieldText(r.fields['Deadstock']) : ''
       };
     });
     renderHeader({

@@ -65,17 +65,30 @@ function koliTag(k) {
   return k > 1 ? '<div class="koli-tag">Koli ' + escHtml(String(k)) + '</div>' : '';
 }
 
+// Sel Deadstock: pil merah bila deadstock, '-' bila tanpa informasi, kosong bila bukan deadstock.
+function deadCell(sd) {
+  return '<td>' + (sd.dead ? '<span class="pill-dead">Deadstock</span>' : escHtml(sd.deadLabel)) + '</td>';
+}
+
 function renderItems(items) {
   _detailItems = items;
   document.getElementById('items-title').textContent = 'Item List (' + items.length + ')';
-  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th class="num">Stock</th><th class="num">Sales</th><th class="num">Req Qty</th><th class="num">Apv Qty</th><th>Reason</th></tr></thead>';
+  // Flag SALES_FIELDS: Jual 3 bln + Deadstock dari DATA MASTER menggantikan Sales isian PS.
+  var sales = !!CONFIG.SALES_FIELDS;
+  var salesHead = sales ? '<th class="num">Jual 3 bln</th><th>Deadstock</th>' : '<th class="num">Sales</th>';
+  document.getElementById('sales-note').style.display = sales ? '' : 'none';
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th class="num">Stock</th>' + salesHead + '<th class="num">Req Qty</th><th class="num">Apv Qty</th><th>Reason</th></tr></thead>';
   var tbody = '<tbody>' + items.map(function(it) {
+    var sd = sales ? FLOW.salesDisplay(it.avgSales, it.deadText) : null;
+    var salesCells = sales
+      ? '<td class="num">' + escHtml(sd.avg) + '</td>' + deadCell(sd)
+      : '<td class="num">' + escHtml(it.salesQty) + '</td>';
     return '<tr data-rid="' + escHtml(it.recordId) + '">' +
       '<td>' + escHtml(it.seq) + '</td>' +
       '<td>' + escHtml(it.article) + '</td>' +
       '<td>' + escHtml(it.description) + koliTag(it.koli) + '</td>' +
       '<td class="num">' + escHtml(it.stockQty) + '</td>' +
-      '<td class="num">' + escHtml(it.salesQty) + '</td>' +
+      salesCells +
       '<td class="num">' + escHtml(it.requestQty) + '</td>' +
       '<td class="num"><input type="number" class="apv-qty-input" min="' + (it.koli > 1 ? it.koli : 0) + '"' + (it.koli > 1 ? ' step="' + it.koli + '"' : '') + ' value="' + escHtml(String(it.requestQty !== '' ? it.requestQty : 0)) + '"></td>' +
       '<td>' + escHtml(it.reason) + '</td></tr>';
@@ -126,7 +139,10 @@ function loadDetail() {
         requestQty:  r.fields['Request Qty']   != null ? r.fields['Request Qty'] : '',
         reason:      fieldText(r.fields['Reason']),
         // larkSearch halaman ini tanpa fieldNames; Koli hanya dibaca di mode uji (di produksi field-nya tidak ada).
-        koli:        (CONFIG.KOLI_FIELD && Number(r.fields['Koli']) > 1) ? Number(r.fields['Koli']) : 1
+        koli:        (CONFIG.KOLI_FIELD && Number(r.fields['Koli']) > 1) ? Number(r.fields['Koli']) : 1,
+        // Avg Sales 3M / Deadstock hanya dibaca bila CONFIG.SALES_FIELDS (di produksi field-nya belum ada).
+        avgSales:    (CONFIG.SALES_FIELDS && typeof r.fields['Avg Sales 3M'] === 'number') ? r.fields['Avg Sales 3M'] : null,
+        deadText:    CONFIG.SALES_FIELDS ? fieldText(r.fields['Deadstock']) : ''
       };
     }));
 
