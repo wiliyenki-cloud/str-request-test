@@ -6,6 +6,7 @@ var _shown = PAGE_SIZE;
 var _all = [];        // hasil server (sudah dipersempit status + department)
 var _depts = [];      // department yang boleh dilihat user ini
 var _deptSel = '';    // '' = semua department milik user
+var _allDepts = false; // mode uji peran MD (panel DBG): semua department ditarik tanpa filter department
 
 function show(id) {
   ['screen-loading', 'screen-error', 'screen-empty', 'screen-list'].forEach(function(s) {
@@ -104,16 +105,14 @@ function render() {
 // Satu pencarian per department yang dipilih (status dan department difilter di server), paling banyak 2 paralel.
 function fetchList() {
   show('screen-loading');
-  var target = _deptSel ? [_deptSel] : _depts;
+  // Peran MD dari panel DBG melihat SEMUA department (data uji tidak terbatas pada tiga department di MD_MAP).
+  var target = _allDepts ? [null] : (_deptSel ? [_deptSel] : _depts);
   var tasks = target.map(function(d) {
     return function() {
-      return larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, {
-        conjunction: 'and',
-        conditions: [
-          { field_name: 'Status',     operator: 'is', value: [FLOW.S.WAITING_MD] },
-          { field_name: 'Department', operator: 'is', value: [d] }
-        ]
-      }, { fieldNames: HEADER_FIELDS });
+      var conditions = [{ field_name: 'Status', operator: 'is', value: [FLOW.S.WAITING_MD] }];
+      if (d) conditions.push({ field_name: 'Department', operator: 'is', value: [d] });
+      return larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
+        { conjunction: 'and', conditions: conditions }, { fieldNames: HEADER_FIELDS });
     };
   });
   return FLOW.runLimited(tasks, 2).then(function(results) {
@@ -139,7 +138,8 @@ function load() {
       show('screen-empty');
       return null;
     }
-    _depts = depts;
+    _allDepts = asMd;
+    _depts = asMd ? [] : depts;   // peran DBG: tanpa pilihan department (semua ditarik)
     fillDeptSelect();
     return fetchList();
   }).catch(showError);
