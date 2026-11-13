@@ -31,6 +31,8 @@ function statusBadgeClass(status) {
   if (status === CONFIG.STATUS_WAITING_ICO) return 'badge-waiting-ico';
   if (status === CONFIG.STATUS_DONE)        return 'badge-done';
   if (status === CONFIG.STATUS_REJECT)      return 'badge-reject';
+  if (status === FLOW.S.APPROVED_RPA || status === FLOW.S.WAITING_MD ||
+      status === FLOW.S.WAITING_IP   || status === FLOW.S.CSV_READY) return 'badge-v2';
   return 'badge-waiting-mgr';
 }
 
@@ -71,7 +73,12 @@ function filterRecords(records, filter) {
       'waiting-mgr': CONFIG.STATUS_WAITING_MGR,
       'waiting-ico': CONFIG.STATUS_WAITING_ICO,
       'done':        CONFIG.STATUS_DONE,
-      'reject':      CONFIG.STATUS_REJECT
+      'reject':      CONFIG.STATUS_REJECT,
+      // Alur STR V2 (hanya ada di mode uji)
+      'waiting-rpa': FLOW.S.APPROVED_RPA,
+      'waiting-md':  FLOW.S.WAITING_MD,
+      'waiting-ip':  FLOW.S.WAITING_IP,
+      'csv-ready':   FLOW.S.CSV_READY
     };
     var target = map[filter];
     result = result.filter(function(r) { return r.status === target; });
@@ -448,6 +455,11 @@ function renderMasterDetail() {
 document.getElementById('btn-back').addEventListener('click', function() {
   window.location.href = '../home/index.html';
 });
+
+// Tab status alur V2 (Waiting RPA, MD, IP, CSV Ready) hanya tampil di mode uji
+if (CONFIG.FLOW_V2) {
+  document.querySelectorAll('#filter-tabs .v2-tab').forEach(function(t) { t.style.display = ''; });
+}
 
 // Status tabs
 document.getElementById('filter-tabs').querySelectorAll('.filter-tab').forEach(function(tab) {

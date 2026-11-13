@@ -7,7 +7,7 @@
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>STR List</title>
-  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="index.css?v=2">
 </head>
 <body>
   <div class="page">
@@ -20,6 +20,10 @@
     <div class="filter-tabs" id="filter-tabs">
       <div class="filter-tab active" data-filter="all">All</div>
       <div class="filter-tab" data-filter="waiting-mgr">Waiting Approval</div>
+      <div class="filter-tab v2-tab" data-filter="waiting-rpa" style="display:none">Waiting RPA</div>
+      <div class="filter-tab v2-tab" data-filter="waiting-md" style="display:none">Waiting MD</div>
+      <div class="filter-tab v2-tab" data-filter="waiting-ip" style="display:none">Waiting IP</div>
+      <div class="filter-tab v2-tab" data-filter="csv-ready" style="display:none">CSV Ready</div>
       <div class="filter-tab" data-filter="waiting-ico">Waiting Create</div>
       <div class="filter-tab" data-filter="done">Done</div>
       <div class="filter-tab" data-filter="reject">Reject</div>
@@ -55,6 +59,6 @@
   <script src="../../utils/debug.js?v=3"></script>
   <script src="../../utils/flow.js?v=23"></script>
   <script src="../../utils/scope.js?v=4"></script>
-  <script src="index.js?v=14"></script>
+  <script src="index.js?v=15"></script>
 </body>
 </html>

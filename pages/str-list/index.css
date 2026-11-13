@@ -66,6 +66,7 @@ body { margin: 0; background: #f5f5f5; font-family: -apple-system, BlinkMacSyste
 .badge-waiting-ico  { background: #e3f2fd; color: #1565c0; }
 .badge-done         { background: #e8f5e9; color: #2e7d32; }
 .badge-reject       { background: #ffebee; color: #c62828; }
+.badge-v2           { background: #ede7f6; color: #4527a0; }
 .card-row { display: flex; gap: 8px; margin-bottom: 4px; font-size: 13px; }
 .lbl { color: #888; min-width: 100px; flex-shrink: 0; }
 
