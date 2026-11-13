@@ -119,5 +119,5 @@ CONFIG.TEST = {
   // Akun developer dipakai untuk semua peran supaya satu orang bisa menguji seluruh alur.
   CONFIG.MD_MAP = { 'Sofa & Chair': [DEV], 'Bedroom': [DEV], 'Kitchen': [DEV] };
   CONFIG.IP_USER_IDS = [DEV];
-  CONFIG.MANAGER_SITE_OVERRIDE[DEV] = ['J999', 'J347', 'J752', 'J218'];
+  CONFIG.MANAGER_SITE_OVERRIDE[DEV] = ['J999', 'J347', 'J752', 'J218', 'J383', 'J353', 'J399', 'J474', 'J341'];
 })();

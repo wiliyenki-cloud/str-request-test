@@ -97,6 +97,6 @@ test('MANAGER_SITE_OVERRIDE: kosong di produksi, akun developer jadi manager sit
   assert.deepStrictEqual(prod.MANAGER_SITE_OVERRIDE, {});
   const uji = load('/x/pages/home/index.html', '?env=test').CONFIG;
   const dev = uji.DEV_USER_IDS[0];
-  assert.deepStrictEqual(uji.MANAGER_SITE_OVERRIDE[dev], ['J999', 'J347', 'J752', 'J218']);
+  assert.deepStrictEqual(uji.MANAGER_SITE_OVERRIDE[dev], ['J999', 'J347', 'J752', 'J218', 'J383', 'J353', 'J399', 'J474', 'J341']);
   assert.strictEqual(Object.keys(uji.MANAGER_SITE_OVERRIDE).length, 1);
 });
