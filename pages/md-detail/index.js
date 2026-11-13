@@ -1,14 +1,16 @@
 var HEADER_FIELDS = ['STR Number', 'Site', 'Site Name', 'Type STR', 'Supplying Site', 'Department',
                      'Plan Receive Date', 'Requested By', 'Submit Date', 'Status'];
-var DETAIL_FIELDS = ['STR Number', 'Row Sequence', 'Article', 'Description', 'Stock Qty', 'Stock DC',
-                     'Sales Qty', 'Suggested Qty', 'Request Qty', 'Approval Qty', 'Reason'];
+var DETAIL_FIELDS = ['STR Number', 'Row Sequence', 'Article', 'Description', 'Request Qty', 'Approval Qty', 'Reason'];
 // Field 'Koli' hanya ada di Base uji; di produksi daftar field tidak berubah.
 if (CONFIG.KOLI_FIELD) DETAIL_FIELDS.push('Koli');
+// Field 'RPA Data' (hasil RPA STR) hanya ada di Base uji; di produksi tidak diminta.
+if (CONFIG.RPA_DATA_FIELD) DETAIL_FIELDS.push('RPA Data');
 
 var _recordId  = '';
 var _strNumber = '';
 var _acting    = false;
 var _items     = [];
+var _supplyingSite = '';
 
 function getParams() {
   var qs = location.search.substring(1);
@@ -78,28 +80,48 @@ function renderHeader(h) {
     }).join('');
 }
 
+function rpaCell(v) { return (v == null || v === '') ? '-' : escHtml(String(v)); }
+
+// Baris detail RPA (hidden bawaan): pasangan label: nilai sebagai chip; kosong bila tidak ada RPA Data.
+function rpaExtraRow(sum) {
+  if (!sum || !sum.extras.length) return '';
+  return '<tr class="rpa-extra" style="display:none"><td colspan="10">' + sum.extras.map(function(e) {
+    return '<span class="rpa-chip">' + escHtml(e.label) + ': ' + escHtml(String(e.value)) + '</span>';
+  }).join('') + '</td></tr>';
+}
+
 function renderItems(items) {
   _items = items;
   document.getElementById('items-title').textContent = 'Item List (' + items.length + ')';
-  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th class="num">Stok</th><th class="num">Stok DC</th>' +
-    '<th class="num">Jual</th><th class="num">Saran</th><th class="num">Apv Qty</th><th>Keputusan</th><th>Qty MD</th></tr></thead>';
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th class="num">Stok Toko</th><th class="num">Stok DC</th>' +
+    '<th class="num">SPLT</th><th class="num">Jual 3 bln</th><th class="num">Apv Qty</th><th>Keputusan</th><th>Qty MD</th></tr></thead>';
   var tbody = '<tbody>' + items.map(function(it) {
     var apv = it.approvalQty !== '' ? it.approvalQty : it.requestQty;
+    var sum = FLOW.rpaSummary(it.rpa, _supplyingSite);
+    var toggle = sum && sum.extras.length ? ' <button type="button" class="rpa-toggle" title="Detail RPA">&#9656;</button>' : '';
     return '<tr data-seq="' + escHtml(it.seq) + '">' +
-      '<td>' + escHtml(it.seq) + '</td><td>' + escHtml(it.article) + '</td><td>' + escHtml(it.description) + koliTag(it.koli) + '</td>' +
-      '<td class="num">' + escHtml(String(it.stockQty)) + '</td><td class="num">' + escHtml(String(it.stockDc)) + '</td>' +
-      '<td class="num">' + escHtml(String(it.salesQty)) + '</td><td class="num">' + escHtml(String(it.suggestedQty)) + '</td>' +
+      '<td>' + escHtml(it.seq) + toggle + '</td><td>' + escHtml(it.article) + '</td><td>' + escHtml(it.description) + koliTag(it.koli) + '</td>' +
+      '<td class="num">' + rpaCell(sum && sum.store) + '</td><td class="num">' + rpaCell(sum && sum.dc) + '</td>' +
+      '<td class="num">' + rpaCell(sum && sum.splt) + '</td><td class="num">' + rpaCell(sum && sum.avg3) + '</td>' +
       '<td class="num">' + escHtml(String(apv)) + '</td>' +
       '<td><select class="md-dec"><option value="">Pilih</option><option value="ok">Setuju</option>' +
         '<option value="qty">Ubah qty</option><option value="reject">Tolak</option></select></td>' +
       '<td><input type="number" class="md-qty" min="' + (it.koli > 1 ? it.koli : 0) + '" max="999"' + (it.koli > 1 ? ' step="' + it.koli + '"' : '') + ' disabled value="' + escHtml(String(apv)) + '"></td>' +
-      '</tr>';
+      '</tr>' + rpaExtraRow(sum);
   }).join('') + '</tbody>';
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
   document.querySelectorAll('#items-table select.md-dec').forEach(function(sel) {
     sel.addEventListener('change', function() {
       var input = sel.closest('tr').querySelector('.md-qty');
       input.disabled = (sel.value !== 'qty');
+    });
+  });
+  document.querySelectorAll('#items-table button.rpa-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var extra = btn.closest('tr').nextElementSibling;
+      var open = extra.style.display === 'none';
+      extra.style.display = open ? '' : 'none';
+      btn.innerHTML = open ? '&#9662;' : '&#9656;';
     });
   });
 }
@@ -121,7 +143,7 @@ document.getElementById('bulk-actions').addEventListener('click', function(ev) {
 });
 
 function collectDecisions() {
-  return Array.prototype.map.call(document.querySelectorAll('#items-table tbody tr'), function(tr) {
+  return Array.prototype.map.call(document.querySelectorAll('#items-table tbody tr[data-seq]'), function(tr) {
     return { seq: Number(tr.dataset.seq), d: tr.querySelector('.md-dec').value, q: tr.querySelector('.md-qty').value };
   });
 }
@@ -144,6 +166,7 @@ function loadDetail() {
     }
     var details = results[1];
     details.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
+    _supplyingSite = fieldText(h.fields['Supplying Site']);
     renderHeader({
       strNumber:       fieldText(h.fields['STR Number']),
       site:            fieldText(h.fields['Site']),
@@ -160,12 +183,9 @@ function loadDetail() {
         seq:          fieldText(r.fields['Row Sequence']),
         article:      fieldText(r.fields['Article']),
         description:  fieldText(r.fields['Description']),
-        stockQty:     num(r.fields['Stock Qty']),
-        stockDc:      num(r.fields['Stock DC']),
-        salesQty:     num(r.fields['Sales Qty']),
-        suggestedQty: num(r.fields['Suggested Qty']),
         requestQty:   num(r.fields['Request Qty']),
         approvalQty:  num(r.fields['Approval Qty']),
+        rpa:          FLOW.parseRpaData(fieldText(r.fields['RPA Data'])),
         koli:         num(r.fields['Koli']) > 1 ? Number(r.fields['Koli']) : 1
       };
     }));

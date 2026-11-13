@@ -1,6 +1,8 @@
 var HEADER_FIELDS = ['STR Number', 'Site', 'Site Name', 'Type STR', 'Supplying Site', 'Kode Vendor', 'Department',
                      'Plan Receive Date', 'Requested By', 'Submit Date', 'Status', 'MD Review'];
 var DETAIL_FIELDS = ['STR Number', 'Row Sequence', 'Article', 'Description', 'Request Qty', 'Approval Qty'];
+// Field 'RPA Data' (hasil RPA STR) hanya ada di Base uji; di produksi tidak diminta.
+if (CONFIG.RPA_DATA_FIELD) DETAIL_FIELDS.push('RPA Data');
 
 var _recordId  = '';
 var _strNumber = '';
@@ -9,6 +11,7 @@ var _header    = {};
 var _items     = [];
 var _review    = {};
 var _status    = '';
+var _supplyingSite = '';
 
 function getParams() {
   var qs = location.search.substring(1);
@@ -85,18 +88,39 @@ function mdLabel(seq) {
   return r.d === 'ok' ? 'Setuju' : r.d === 'qty' ? 'Diubah' : r.d === 'reject' ? 'Ditolak' : '-';
 }
 
+function rpaCell(v) { return (v == null || v === '') ? '-' : escHtml(String(v)); }
+
+// Baris detail RPA (hidden bawaan): pasangan label: nilai sebagai chip; kosong bila tidak ada RPA Data.
+function rpaExtraRow(sum) {
+  if (!sum || !sum.extras.length) return '';
+  return '<tr class="rpa-extra" style="display:none"><td colspan="9">' + sum.extras.map(function(e) {
+    return '<span class="rpa-chip">' + escHtml(e.label) + ': ' + escHtml(String(e.value)) + '</span>';
+  }).join('') + '</td></tr>';
+}
+
 function renderItems() {
   document.getElementById('items-title').textContent = 'Item List (' + _items.length + ')';
-  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th class="num">Req</th><th class="num">Apv</th><th>MD</th><th class="num">Final</th></tr></thead>';
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th class="num">Stok DC</th><th class="num">Jual 3 bln</th><th class="num">Req</th><th class="num">Apv</th><th>MD</th><th class="num">Final</th></tr></thead>';
   var tbody = '<tbody>' + _items.map(function(it) {
     var fq = FLOW.finalQty(it, _review);
     var apv = it.approvalQty !== '' ? it.approvalQty : it.requestQty;
-    return '<tr><td>' + escHtml(it.seq) + '</td><td>' + escHtml(it.article) + '</td><td>' + escHtml(it.description) + '</td>' +
+    var sum = FLOW.rpaSummary(it.rpa, _supplyingSite);
+    var toggle = sum && sum.extras.length ? ' <button type="button" class="rpa-toggle" title="Detail RPA">&#9656;</button>' : '';
+    return '<tr><td>' + escHtml(it.seq) + toggle + '</td><td>' + escHtml(it.article) + '</td><td>' + escHtml(it.description) + '</td>' +
+      '<td class="num">' + rpaCell(sum && sum.dc) + '</td><td class="num">' + rpaCell(sum && sum.avg3) + '</td>' +
       '<td class="num">' + escHtml(String(it.requestQty)) + '</td><td class="num">' + escHtml(String(apv)) + '</td>' +
       '<td>' + mdLabel(it.seq) + '</td>' +
-      '<td class="num' + (fq === 0 ? ' zero' : '') + '">' + fq + '</td></tr>';
+      '<td class="num' + (fq === 0 ? ' zero' : '') + '">' + fq + '</td></tr>' + rpaExtraRow(sum);
   }).join('') + '</tbody>';
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
+  document.querySelectorAll('#items-table button.rpa-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var extra = btn.closest('tr').nextElementSibling;
+      var open = extra.style.display === 'none';
+      extra.style.display = open ? '' : 'none';
+      btn.innerHTML = open ? '&#9662;' : '&#9656;';
+    });
+  });
 }
 
 function downloadCsv(pgrMap) {
@@ -110,11 +134,15 @@ function downloadCsv(pgrMap) {
 }
 
 // Ambil Purchasing Group (PGR) dari master artikel lewat GAS, per 100 kode. Hasil: { <kode huruf kecil>: pgr }.
+// PGR dari RPA Data dipakai lebih dulu; GAS hanya ditanya untuk artikel yang masih kosong.
 function fetchPgrMap() {
-  var seen = {}, codes = [];
+  var seen = {}, codes = [], base = {};
   _items.forEach(function(it) {
     var c = String(it.article || '').trim();
-    if (c && FLOW.finalQty(it, _review) > 0 && !seen[c.toLowerCase()]) { seen[c.toLowerCase()] = true; codes.push(c); }
+    var key = c.toLowerCase();
+    if (!c || FLOW.finalQty(it, _review) <= 0) return;
+    if (it.rpa && it.rpa.pgr && String(it.rpa.pgr).trim()) base[key] = String(it.rpa.pgr).trim();
+    if (!base[key] && !seen[key]) { seen[key] = true; codes.push(c); }
   });
   var chunks = [];
   for (var i = 0; i < codes.length; i += 100) chunks.push(codes.slice(i, i + 100));
@@ -122,9 +150,10 @@ function fetchPgrMap() {
     return gasProxy({ action: 'articlePgr', codes: ch.join(',') });
   })).then(function(results) {
     var map = {};
+    Object.keys(base).forEach(function(k) { map[k] = base[k]; });
     results.forEach(function(d) {
       var m = (d && d.pgr) || {};
-      Object.keys(m).forEach(function(k) { map[k] = m[k]; });
+      Object.keys(m).forEach(function(k) { if (!map[k]) map[k] = m[k]; });
     });
     return map;
   });
@@ -173,13 +202,15 @@ function loadDetail() {
     };
     var details = results[1];
     details.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
+    _supplyingSite = fieldText(h.fields['Supplying Site']);
     _items = details.map(function(r) {
       return {
         seq:         fieldText(r.fields['Row Sequence']),
         article:     fieldText(r.fields['Article']),
         description: fieldText(r.fields['Description']),
         requestQty:  r.fields['Request Qty']  != null ? r.fields['Request Qty']  : '',
-        approvalQty: r.fields['Approval Qty'] != null ? r.fields['Approval Qty'] : ''
+        approvalQty: r.fields['Approval Qty'] != null ? r.fields['Approval Qty'] : '',
+        rpa:         FLOW.parseRpaData(fieldText(r.fields['RPA Data']))
       };
     });
     renderHeader({

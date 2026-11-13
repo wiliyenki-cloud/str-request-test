@@ -45,8 +45,8 @@ function renderTabs(user) {
 }
 
 // ── Panel uji: isi hasil RPA dummy (hanya developer, hanya Base uji) ──────────
-// Di produksi RPA STR menulis kolom ini lewat API Lark (batch). Tombol ini hanya
-// untuk menguji alur dengan sedikit data, makanya dibatasi DEV_RPA_MAX.
+// Di alur nyata GAS menyalin hasil RPA dari Google Sheet ke kolom 'RPA Data' (JSON). Tombol ini menulis
+// RPA Data karangan untuk menguji alur dengan sedikit data, makanya dibatasi DEV_RPA_MAX.
 function fillOne(h) {
   var strNo = fieldText(h.fields['STR Number']);
   var site  = fieldText(h.fields['Site']);
@@ -57,9 +57,10 @@ function fillOne(h) {
       var chain = Promise.resolve();
       details.forEach(function(d) {
         chain = chain.then(function() {
-          var v = FLOW.dummyRpa(site, fieldText(d.fields['Article']));
+          // Satu field saja: RPA Data (JSON). Isian PS (Stock Qty / Sales Qty / Stock DC / Suggested Qty) tidak disentuh.
+          var rpa = FLOW.dummyRpa(site, fieldText(d.fields['Article']));
           return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_DETAIL_TABLE_ID, d.record_id, {
-            'Stock Qty': v.stockQty, 'Stock DC': v.stockDc, 'Sales Qty': v.salesQty, 'Suggested Qty': v.suggestedQty
+            'RPA Data': JSON.stringify(rpa)
           });
         });
       });
