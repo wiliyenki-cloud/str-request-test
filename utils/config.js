@@ -72,6 +72,8 @@ CONFIG.FLOW_V2 = false;
 CONFIG.KOLI_FIELD = false;
 // Field 'RPA Data' di STR Detail baru ada di Base uji; di produksi tidak boleh diminta.
 CONFIG.RPA_DATA_FIELD = false;
+// Field 'Avg Sales 3M' dan 'Deadstock' di STR Detail baru ada di Base uji; di produksi tidak boleh diminta.
+CONFIG.SALES_FIELDS = false;
 // Site tambahan yang boleh di-approve oleh open_id tertentu. Kosong di produksi; di mode uji akun developer
 // jadi manager site uji (Master Site produksi tidak boleh diubah, dan J999 dkk. tidak ada di sana).
 CONFIG.MANAGER_SITE_OVERRIDE = {};
@@ -107,6 +109,7 @@ CONFIG.TEST = {
   CONFIG.FLOW_V2             = true;
   CONFIG.KOLI_FIELD          = true;
   CONFIG.RPA_DATA_FIELD      = true;
+  CONFIG.SALES_FIELDS        = true;
   CONFIG.STR_BASE_APP_TOKEN  = T.STR_BASE_APP_TOKEN;
   CONFIG.STR_HEADER_TABLE_ID = T.STR_HEADER_TABLE_ID;
   CONFIG.STR_DETAIL_TABLE_ID = T.STR_DETAIL_TABLE_ID;

@@ -92,6 +92,12 @@ test('RPA_DATA_FIELD: mati di produksi, menyala hanya di ?env=test', () => {
   assert.strictEqual(load('/x/pages/home/index.html', '?env=test').CONFIG.RPA_DATA_FIELD, true);
 });
 
+test('SALES_FIELDS: mati di produksi, menyala hanya di ?env=test', () => {
+  assert.strictEqual(load('/x/pages/home/index.html', '').CONFIG.SALES_FIELDS, false);
+  assert.strictEqual(load('/x/pages/home/index.html', '?env=test').CONFIG.SALES_FIELDS, true);
+  assert.strictEqual(load('/x/pages/md-detail/index.html', '', { _env: 'test' }).CONFIG.SALES_FIELDS, true);
+});
+
 test('MANAGER_SITE_OVERRIDE: kosong di produksi, akun developer jadi manager site uji hanya di ?env=test', () => {
   const prod = load('/x/pages/home/index.html', '').CONFIG;
   assert.deepStrictEqual(prod.MANAGER_SITE_OVERRIDE, {});

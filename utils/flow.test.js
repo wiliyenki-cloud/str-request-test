@@ -490,3 +490,30 @@ test('csvFileName: PR-IP-YYYYMMDD-HHMM-<n>STR.csv dari bagian tanggal lokal', ()
   assert.strictEqual(FLOW.csvFileName(new Date(2026, 0, 5, 9, 7), 3), 'PR-IP-20260105-0907-3STR.csv');
   assert.strictEqual(FLOW.csvFileName(new Date(2026, 10, 13, 23, 59), 12), 'PR-IP-20261113-2359-12STR.csv');
 });
+
+test('salesDisplay: angka dibulatkan maks 2 desimal tanpa nol di belakang', () => {
+  assert.strictEqual(FLOW.salesDisplay(3.3333, '').avg, '3.33');
+  assert.strictEqual(FLOW.salesDisplay(2, '').avg, '2');
+  assert.strictEqual(FLOW.salesDisplay(0, '').avg, '0');
+  assert.strictEqual(FLOW.salesDisplay('1.5', '').avg, '1.5');
+  assert.strictEqual(FLOW.salesDisplay(2.10, '').avg, '2.1');
+});
+
+test('salesDisplay: kosong atau bukan angka tampil -', () => {
+  assert.strictEqual(FLOW.salesDisplay(null, '').avg, '-');
+  assert.strictEqual(FLOW.salesDisplay(undefined, '').avg, '-');
+  assert.strictEqual(FLOW.salesDisplay('', '').avg, '-');
+  assert.strictEqual(FLOW.salesDisplay('abc', '').avg, '-');
+  assert.strictEqual(FLOW.salesDisplay(NaN, '').avg, '-');
+});
+
+test('salesDisplay: dead dan deadLabel', () => {
+  assert.deepStrictEqual(FLOW.salesDisplay(2, 'Deadstock'), { avg: '2', dead: true, deadLabel: 'Deadstock' });
+  assert.strictEqual(FLOW.salesDisplay(2, ' deadstock ').dead, true);
+  assert.strictEqual(FLOW.salesDisplay(null, 'DEADSTOCK').deadLabel, 'Deadstock');
+  assert.deepStrictEqual(FLOW.salesDisplay(2, ''), { avg: '2', dead: false, deadLabel: '' });
+  assert.deepStrictEqual(FLOW.salesDisplay(0, null), { avg: '0', dead: false, deadLabel: '' });
+  assert.deepStrictEqual(FLOW.salesDisplay(null, ''), { avg: '-', dead: false, deadLabel: '-' });
+  assert.deepStrictEqual(FLOW.salesDisplay(undefined, undefined), { avg: '-', dead: false, deadLabel: '-' });
+  assert.strictEqual(FLOW.salesDisplay(2, 'lainnya').dead, false);
+});

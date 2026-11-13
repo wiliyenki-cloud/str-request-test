@@ -362,7 +362,20 @@ var FLOW = (function () {
     });
   }
 
+  // Tampilan Jual 3 bln + Deadstock. avg: angka/teks/null; deadText: teks field Deadstock.
+  // deadLabel: 'Deadstock' bila deadstock, '-' bila tidak ada informasi sama sekali, selain itu ''.
+  function salesDisplay(avg, deadText) {
+    var shown = '-';
+    if (avg !== null && avg !== undefined && String(avg).trim() !== '') {
+      var n = Number(avg);
+      if (isFinite(n)) shown = String(Math.round(n * 100) / 100);
+    }
+    var dead = String(deadText === null || deadText === undefined ? '' : deadText).trim().toLowerCase() === 'deadstock';
+    return { avg: shown, dead: dead, deadLabel: dead ? 'Deadstock' : (shown === '-' ? '-' : '') };
+  }
+
   return {
+    salesDisplay: salesDisplay,
     S: S, CSV_COLS: CSV_COLS,
     parseMdReview: parseMdReview, serializeMdReview: serializeMdReview,
     finalQty: finalQty, koliCheck: koliCheck, validateApprovalQtys: validateApprovalQtys, validateMdDecisions: validateMdDecisions, statusAfterMd: statusAfterMd,
