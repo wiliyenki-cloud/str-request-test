@@ -10,7 +10,6 @@ var _recordId  = '';
 var _strNumber = '';
 var _acting    = false;
 var _items     = [];
-var _supplyingSite = '';
 
 function getParams() {
   var qs = location.search.substring(1);
@@ -82,10 +81,39 @@ function renderHeader(h) {
 
 function rpaCell(v) { return (v == null || v === '') ? '-' : escHtml(String(v)); }
 
+// Gabungan kode DC dari semua item, urutan kemunculan pertama (urutan kolom sheet RPA).
+function dcCodesOf(items) {
+  var seen = {}, out = [];
+  items.forEach(function(it) {
+    var s = FLOW.rpaSummary(it.rpa);
+    if (!s) return;
+    s.dcs.forEach(function(d) { if (!seen[d.code]) { seen[d.code] = true; out.push(d.code); } });
+  });
+  return out;
+}
+
+// Sel stok: Toko, RDC, SPLT, lalu satu sel per kode DC; jumlahnya selalu 3 + dcCodes.length.
+function stockCells(sum, dcCodes) {
+  var cells = ['<td class="num">' + rpaCell(sum && sum.store) + '</td>',
+               '<td class="num">' + rpaCell(sum && sum.rdc) + '</td>',
+               '<td class="num">' + rpaCell(sum && sum.splt) + '</td>'];
+  dcCodes.forEach(function(code) {
+    var v = null;
+    if (sum) sum.dcs.forEach(function(d) { if (d.code === code) v = d.value; });
+    cells.push('<td class="num">' + rpaCell(v) + '</td>');
+  });
+  return cells.join('');
+}
+
+function stockHeads(dcCodes) {
+  return '<th class="num">Stok Toko</th><th class="num">RDC</th><th class="num">SPLT</th>' +
+    dcCodes.map(function(c) { return '<th class="num">' + escHtml(c) + '</th>'; }).join('');
+}
+
 // Baris detail RPA (hidden bawaan): pasangan label: nilai sebagai chip; kosong bila tidak ada RPA Data.
-function rpaExtraRow(sum) {
+function rpaExtraRow(sum, colspan) {
   if (!sum || !sum.extras.length) return '';
-  return '<tr class="rpa-extra" style="display:none"><td colspan="10">' + sum.extras.map(function(e) {
+  return '<tr class="rpa-extra" style="display:none"><td colspan="' + colspan + '">' + sum.extras.map(function(e) {
     return '<span class="rpa-chip">' + escHtml(e.label) + ': ' + escHtml(String(e.value)) + '</span>';
   }).join('') + '</td></tr>';
 }
@@ -93,21 +121,22 @@ function rpaExtraRow(sum) {
 function renderItems(items) {
   _items = items;
   document.getElementById('items-title').textContent = 'Item List (' + items.length + ')';
-  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th class="num">Stok Toko</th><th class="num">Stok DC</th>' +
-    '<th class="num">SPLT</th><th class="num">Jual 3 bln</th><th class="num">Apv Qty</th><th>Keputusan</th><th>Qty MD</th></tr></thead>';
+  var dcCodes = dcCodesOf(items);
+  var colCount = 3 + 3 + dcCodes.length + 1 + 3; // #/Article/Description + Toko/RDC/SPLT + DC + Jual 3 bln + Apv/Keputusan/Qty MD
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th>' + stockHeads(dcCodes) +
+    '<th class="num">Jual 3 bln</th><th class="num">Apv Qty</th><th>Keputusan</th><th>Qty MD</th></tr></thead>';
   var tbody = '<tbody>' + items.map(function(it) {
     var apv = it.approvalQty !== '' ? it.approvalQty : it.requestQty;
-    var sum = FLOW.rpaSummary(it.rpa, _supplyingSite);
+    var sum = FLOW.rpaSummary(it.rpa);
     var toggle = sum && sum.extras.length ? ' <button type="button" class="rpa-toggle" title="Detail RPA">&#9656;</button>' : '';
     return '<tr data-seq="' + escHtml(it.seq) + '">' +
       '<td>' + escHtml(it.seq) + toggle + '</td><td>' + escHtml(it.article) + '</td><td>' + escHtml(it.description) + koliTag(it.koli) + '</td>' +
-      '<td class="num">' + rpaCell(sum && sum.store) + '</td><td class="num">' + rpaCell(sum && sum.dc) + '</td>' +
-      '<td class="num">' + rpaCell(sum && sum.splt) + '</td><td class="num">' + rpaCell(sum && sum.avg3) + '</td>' +
+      stockCells(sum, dcCodes) + '<td class="num">' + rpaCell(sum && sum.avg3) + '</td>' +
       '<td class="num">' + escHtml(String(apv)) + '</td>' +
       '<td><select class="md-dec"><option value="">Pilih</option><option value="ok">Setuju</option>' +
         '<option value="qty">Ubah qty</option><option value="reject">Tolak</option></select></td>' +
       '<td><input type="number" class="md-qty" min="' + (it.koli > 1 ? it.koli : 0) + '" max="999"' + (it.koli > 1 ? ' step="' + it.koli + '"' : '') + ' disabled value="' + escHtml(String(apv)) + '"></td>' +
-      '</tr>' + rpaExtraRow(sum);
+      '</tr>' + rpaExtraRow(sum, colCount);
   }).join('') + '</tbody>';
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
   document.querySelectorAll('#items-table select.md-dec').forEach(function(sel) {
@@ -166,7 +195,6 @@ function loadDetail() {
     }
     var details = results[1];
     details.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
-    _supplyingSite = fieldText(h.fields['Supplying Site']);
     renderHeader({
       strNumber:       fieldText(h.fields['STR Number']),
       site:            fieldText(h.fields['Site']),

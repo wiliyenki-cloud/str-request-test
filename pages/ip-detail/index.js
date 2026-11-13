@@ -11,7 +11,6 @@ var _header    = {};
 var _items     = [];
 var _review    = {};
 var _status    = '';
-var _supplyingSite = '';
 
 function getParams() {
   var qs = location.search.substring(1);
@@ -90,27 +89,59 @@ function mdLabel(seq) {
 
 function rpaCell(v) { return (v == null || v === '') ? '-' : escHtml(String(v)); }
 
+// Gabungan kode DC dari semua item, urutan kemunculan pertama (urutan kolom sheet RPA).
+function dcCodesOf(items) {
+  var seen = {}, out = [];
+  items.forEach(function(it) {
+    var s = FLOW.rpaSummary(it.rpa);
+    if (!s) return;
+    s.dcs.forEach(function(d) { if (!seen[d.code]) { seen[d.code] = true; out.push(d.code); } });
+  });
+  return out;
+}
+
+// Sel stok: Toko, RDC, SPLT, lalu satu sel per kode DC; jumlahnya selalu 3 + dcCodes.length.
+function stockCells(sum, dcCodes) {
+  var cells = ['<td class="num">' + rpaCell(sum && sum.store) + '</td>',
+               '<td class="num">' + rpaCell(sum && sum.rdc) + '</td>',
+               '<td class="num">' + rpaCell(sum && sum.splt) + '</td>'];
+  dcCodes.forEach(function(code) {
+    var v = null;
+    if (sum) sum.dcs.forEach(function(d) { if (d.code === code) v = d.value; });
+    cells.push('<td class="num">' + rpaCell(v) + '</td>');
+  });
+  return cells.join('');
+}
+
+function stockHeads(dcCodes) {
+  return '<th class="num">Stok Toko</th><th class="num">RDC</th><th class="num">SPLT</th>' +
+    dcCodes.map(function(c) { return '<th class="num">' + escHtml(c) + '</th>'; }).join('');
+}
+
 // Baris detail RPA (hidden bawaan): pasangan label: nilai sebagai chip; kosong bila tidak ada RPA Data.
-function rpaExtraRow(sum) {
+function rpaExtraRow(sum, colspan) {
   if (!sum || !sum.extras.length) return '';
-  return '<tr class="rpa-extra" style="display:none"><td colspan="9">' + sum.extras.map(function(e) {
+  return '<tr class="rpa-extra" style="display:none"><td colspan="' + colspan + '">' + sum.extras.map(function(e) {
     return '<span class="rpa-chip">' + escHtml(e.label) + ': ' + escHtml(String(e.value)) + '</span>';
   }).join('') + '</td></tr>';
 }
 
 function renderItems() {
   document.getElementById('items-title').textContent = 'Item List (' + _items.length + ')';
-  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th class="num">Stok DC</th><th class="num">Jual 3 bln</th><th class="num">Req</th><th class="num">Apv</th><th>MD</th><th class="num">Final</th></tr></thead>';
+  var dcCodes = dcCodesOf(_items);
+  var colCount = 3 + 3 + dcCodes.length + 1 + 4; // #/Article/Description + Toko/RDC/SPLT + DC + Jual 3 bln + Req/Apv/MD/Final
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th>' + stockHeads(dcCodes) +
+    '<th class="num">Jual 3 bln</th><th class="num">Req</th><th class="num">Apv</th><th>MD</th><th class="num">Final</th></tr></thead>';
   var tbody = '<tbody>' + _items.map(function(it) {
     var fq = FLOW.finalQty(it, _review);
     var apv = it.approvalQty !== '' ? it.approvalQty : it.requestQty;
-    var sum = FLOW.rpaSummary(it.rpa, _supplyingSite);
+    var sum = FLOW.rpaSummary(it.rpa);
     var toggle = sum && sum.extras.length ? ' <button type="button" class="rpa-toggle" title="Detail RPA">&#9656;</button>' : '';
     return '<tr><td>' + escHtml(it.seq) + toggle + '</td><td>' + escHtml(it.article) + '</td><td>' + escHtml(it.description) + '</td>' +
-      '<td class="num">' + rpaCell(sum && sum.dc) + '</td><td class="num">' + rpaCell(sum && sum.avg3) + '</td>' +
+      stockCells(sum, dcCodes) + '<td class="num">' + rpaCell(sum && sum.avg3) + '</td>' +
       '<td class="num">' + escHtml(String(it.requestQty)) + '</td><td class="num">' + escHtml(String(apv)) + '</td>' +
       '<td>' + mdLabel(it.seq) + '</td>' +
-      '<td class="num' + (fq === 0 ? ' zero' : '') + '">' + fq + '</td></tr>' + rpaExtraRow(sum);
+      '<td class="num' + (fq === 0 ? ' zero' : '') + '">' + fq + '</td></tr>' + rpaExtraRow(sum, colCount);
   }).join('') + '</tbody>';
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
   document.querySelectorAll('#items-table button.rpa-toggle').forEach(function(btn) {
@@ -202,7 +233,6 @@ function loadDetail() {
     };
     var details = results[1];
     details.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
-    _supplyingSite = fieldText(h.fields['Supplying Site']);
     _items = details.map(function(r) {
       return {
         seq:         fieldText(r.fields['Row Sequence']),

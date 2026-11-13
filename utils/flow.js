@@ -195,16 +195,14 @@ var FLOW = (function () {
     return null;
   }
 
-  // Ringkasan RPA Data untuk layar MD dan IP: angka utama + daftar pasangan label/nilai untuk detail yang bisa dibuka.
-  function rpaSummary(rpa, supplyingSite) {
+  // Ringkasan RPA Data untuk layar MD dan IP: Toko, RDC, SPLT, semua DC (urutan sheet) + detail lain yang bisa dibuka.
+  // Argumen kedua (site pemasok) tidak dipakai lagi; tetap diterima agar pemanggil lama tidak rusak.
+  function rpaSummary(rpa) {
     if (!rpa) return null;
     var stok = rpa.stok || {}, pipe = rpa.pipe || {};
-    var want = String(supplyingSite == null ? '' : supplyingSite).trim().toLowerCase();
-    var extras = [{ label: 'RDC', value: stok.rdc }];
-    var dc = stok.dc || {};
-    Object.keys(dc).forEach(function (k) {
-      if (k.toLowerCase() !== want) extras.push({ label: 'Stok ' + k, value: dc[k] });
-    });
+    var dcIn = stok.dc || {};
+    var dcs = Object.keys(dcIn).map(function (k) { return { code: k, value: dcIn[k] }; });
+    var extras = [];
     extras.push({ label: 'PR belum PO', value: pipe.prBelumPo });
     extras.push({ label: 'SO belum OD', value: pipe.soBelumOd });
     extras.push({ label: 'OD belum GI', value: pipe.odBelumGi });
@@ -214,7 +212,7 @@ var FLOW = (function () {
     if (rpa.rr) extras.push({ label: 'Remark replenishment', value: rpa.rr });
     if (rpa.ds) extras.push({ label: 'Deadstock', value: rpa.ds });
     if (rpa.fm) extras.push({ label: 'Tag fixmix', value: rpa.fm });
-    return { store: stok.store, dc: rpaDcStock(rpa, supplyingSite), splt: stok.splt, avg3: rpa.avg3, extras: extras };
+    return { store: stok.store, rdc: stok.rdc, splt: stok.splt, dcs: dcs, avg3: rpa.avg3, extras: extras };
   }
 
   // Saring daftar di sisi layar: o.q = teks bebas (nomor STR, kode site, nama site), o.site = kode site persis.

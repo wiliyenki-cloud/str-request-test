@@ -162,10 +162,11 @@ test('rpaDcStock: kolom DC sesuai site pemasok, tanpa peduli huruf', () => {
 });
 
 test('rpaSummary: null bila tidak ada RPA Data', () => {
+  assert.strictEqual(FLOW.rpaSummary(null), null);
   assert.strictEqual(FLOW.rpaSummary(null, 'H001'), null);
 });
 
-test('rpaSummary: angka utama dan detail berurutan, site pemasok tidak masuk detail', () => {
+test('rpaSummary: toko, RDC, SPLT, semua DC berurutan; detail tanpa RDC dan Stok DC', () => {
   const rpa = FLOW.parseRpaData(JSON.stringify({
     v: 1, stok: { store: 5, rdc: 7, splt: 2, dc: { H001: 12, H014: 3 } },
     pipe: { prBelumPo: 1, soBelumOd: 2, odBelumGi: 3, giBelumGr: 4 },
@@ -173,19 +174,26 @@ test('rpaSummary: angka utama dan detail berurutan, site pemasok tidak masuk det
   }));
   const s = FLOW.rpaSummary(rpa, 'h001');
   assert.strictEqual(s.store, 5);
-  assert.strictEqual(s.dc, 12);
+  assert.strictEqual(s.rdc, 7);
   assert.strictEqual(s.splt, 2);
   assert.strictEqual(s.avg3, 6.5);
-  assert.deepStrictEqual(s.extras.map(e => e.label), ['RDC', 'Stok H014', 'PR belum PO', 'SO belum OD', 'OD belum GI', 'GI belum GR', 'Koli', 'PGR', 'Remark replenishment', 'Deadstock', 'Tag fixmix']);
-  assert.deepStrictEqual(s.extras[1], { label: 'Stok H014', value: 3 });
-  assert.strictEqual(s.extras[6].value, 12);
+  assert.strictEqual(s.dc, undefined);
+  assert.deepStrictEqual(s.dcs, [{ code: 'H001', value: 12 }, { code: 'H014', value: 3 }]);
+  assert.deepStrictEqual(s.extras.map(e => e.label), ['PR belum PO', 'SO belum OD', 'OD belum GI', 'GI belum GR', 'Koli', 'PGR', 'Remark replenishment', 'Deadstock', 'Tag fixmix']);
+  assert.strictEqual(s.extras[4].value, 12);
 });
 
-test('rpaSummary: site pemasok tidak ada -> dc null; koli 1 dan teks kosong tidak masuk detail', () => {
-  const rpa = FLOW.parseRpaData('{"v":1,"stok":{"store":1,"dc":{"H001":9}},"avg3":2}');
-  const s = FLOW.rpaSummary(rpa, 'H999');
-  assert.strictEqual(s.dc, null);
-  assert.deepStrictEqual(s.extras.map(e => e.label), ['RDC', 'Stok H001', 'PR belum PO', 'SO belum OD', 'OD belum GI', 'GI belum GR']);
+test('rpaSummary: dcs mengikuti urutan sheet, tidak diurutkan', () => {
+  const rpa = FLOW.parseRpaData('{"v":1,"stok":{"dc":{"H064":1,"H001":2,"H014":0,"H026":4}}}');
+  assert.deepStrictEqual(FLOW.rpaSummary(rpa).dcs.map(d => d.code), ['H064', 'H001', 'H014', 'H026']);
+  assert.strictEqual(FLOW.rpaSummary(rpa).dcs[2].value, 0);
+});
+
+test('rpaSummary: dc kosong -> dcs array kosong; koli 1 dan teks kosong tidak masuk detail', () => {
+  const rpa = FLOW.parseRpaData('{"v":1,"stok":{"store":1},"avg3":2}');
+  const s = FLOW.rpaSummary(rpa);
+  assert.deepStrictEqual(s.dcs, []);
+  assert.deepStrictEqual(s.extras.map(e => e.label), ['PR belum PO', 'SO belum OD', 'OD belum GI', 'GI belum GR']);
 });
 
 test('buildCsv: sel dengan kutip, newline, dan \\r tunggal di-quote', () => {
