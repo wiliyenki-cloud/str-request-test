@@ -161,6 +161,33 @@ test('rpaDcStock: kolom DC sesuai site pemasok, tanpa peduli huruf', () => {
   assert.strictEqual(FLOW.rpaDcStock(null, 'H001'), null);
 });
 
+test('rpaSummary: null bila tidak ada RPA Data', () => {
+  assert.strictEqual(FLOW.rpaSummary(null, 'H001'), null);
+});
+
+test('rpaSummary: angka utama dan detail berurutan, site pemasok tidak masuk detail', () => {
+  const rpa = FLOW.parseRpaData(JSON.stringify({
+    v: 1, stok: { store: 5, rdc: 7, splt: 2, dc: { H001: 12, H014: 3 } },
+    pipe: { prBelumPo: 1, soBelumOd: 2, odBelumGi: 3, giBelumGr: 4 },
+    avg3: 6.5, koli: 12, pgr: 'J99', rr: 'Replenish', ds: 'DS', fm: 'FM'
+  }));
+  const s = FLOW.rpaSummary(rpa, 'h001');
+  assert.strictEqual(s.store, 5);
+  assert.strictEqual(s.dc, 12);
+  assert.strictEqual(s.splt, 2);
+  assert.strictEqual(s.avg3, 6.5);
+  assert.deepStrictEqual(s.extras.map(e => e.label), ['RDC', 'Stok H014', 'PR belum PO', 'SO belum OD', 'OD belum GI', 'GI belum GR', 'Koli', 'PGR', 'Remark replenishment', 'Deadstock', 'Tag fixmix']);
+  assert.deepStrictEqual(s.extras[1], { label: 'Stok H014', value: 3 });
+  assert.strictEqual(s.extras[6].value, 12);
+});
+
+test('rpaSummary: site pemasok tidak ada -> dc null; koli 1 dan teks kosong tidak masuk detail', () => {
+  const rpa = FLOW.parseRpaData('{"v":1,"stok":{"store":1,"dc":{"H001":9}},"avg3":2}');
+  const s = FLOW.rpaSummary(rpa, 'H999');
+  assert.strictEqual(s.dc, null);
+  assert.deepStrictEqual(s.extras.map(e => e.label), ['RDC', 'Stok H001', 'PR belum PO', 'SO belum OD', 'OD belum GI', 'GI belum GR']);
+});
+
 test('buildCsv: sel dengan kutip, newline, dan \\r tunggal di-quote', () => {
   const header = { strNumber: 'S1', site: 'J1', kodeVendor: 'V1', planReceiveMs: new Date(2026, 10, 20).getTime() };
   const items = [{ seq: 1, article: '1', description: 'a"b\nc\rd', requestQty: 1, approvalQty: 1 }];

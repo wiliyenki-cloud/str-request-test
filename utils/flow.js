@@ -195,6 +195,28 @@ var FLOW = (function () {
     return null;
   }
 
+  // Ringkasan RPA Data untuk layar MD dan IP: angka utama + daftar pasangan label/nilai untuk detail yang bisa dibuka.
+  function rpaSummary(rpa, supplyingSite) {
+    if (!rpa) return null;
+    var stok = rpa.stok || {}, pipe = rpa.pipe || {};
+    var want = String(supplyingSite == null ? '' : supplyingSite).trim().toLowerCase();
+    var extras = [{ label: 'RDC', value: stok.rdc }];
+    var dc = stok.dc || {};
+    Object.keys(dc).forEach(function (k) {
+      if (k.toLowerCase() !== want) extras.push({ label: 'Stok ' + k, value: dc[k] });
+    });
+    extras.push({ label: 'PR belum PO', value: pipe.prBelumPo });
+    extras.push({ label: 'SO belum OD', value: pipe.soBelumOd });
+    extras.push({ label: 'OD belum GI', value: pipe.odBelumGi });
+    extras.push({ label: 'GI belum GR', value: pipe.giBelumGr });
+    if (rpa.koli > 1) extras.push({ label: 'Koli', value: rpa.koli });
+    if (rpa.pgr) extras.push({ label: 'PGR', value: rpa.pgr });
+    if (rpa.rr) extras.push({ label: 'Remark replenishment', value: rpa.rr });
+    if (rpa.ds) extras.push({ label: 'Deadstock', value: rpa.ds });
+    if (rpa.fm) extras.push({ label: 'Tag fixmix', value: rpa.fm });
+    return { store: stok.store, dc: rpaDcStock(rpa, supplyingSite), splt: stok.splt, avg3: rpa.avg3, extras: extras };
+  }
+
   // Saring daftar di sisi layar: o.q = teks bebas (nomor STR, kode site, nama site), o.site = kode site persis.
   function filterItems(items, o) {
     o = o || {};
@@ -325,7 +347,7 @@ var FLOW = (function () {
     S: S, CSV_COLS: CSV_COLS,
     parseMdReview: parseMdReview, serializeMdReview: serializeMdReview,
     finalQty: finalQty, koliCheck: koliCheck, validateApprovalQtys: validateApprovalQtys, validateMdDecisions: validateMdDecisions, statusAfterMd: statusAfterMd,
-    buildCsv: buildCsv, csvMissingPgr: csvMissingPgr, dummyRpa: dummyRpa, parseRpaData: parseRpaData, rpaDcStock: rpaDcStock, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited, filterItems: filterItems, siteOptions: siteOptions,
+    buildCsv: buildCsv, csvMissingPgr: csvMissingPgr, dummyRpa: dummyRpa, parseRpaData: parseRpaData, rpaDcStock: rpaDcStock, rpaSummary: rpaSummary, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited, filterItems: filterItems, siteOptions: siteOptions,
     scopeSites: scopeSites, scopedFilter: scopedFilter, monthMarkers: monthMarkers, detailFilters: detailFilters, clampRangeStart: clampRangeStart,
     roleOverride: roleOverride
   };
