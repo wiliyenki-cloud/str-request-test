@@ -447,3 +447,46 @@ test('parseRpaData: angka berformat (spasi dan koma ribuan) terbaca, teks biasa 
   assert.strictEqual(r.stok.splt, 50);
   assert.strictEqual(r.avg3, 2.5);
 });
+
+test('buildCsvMany: satu baris judul, baris semua STR berurutan, sama dengan buildCsv per STR', () => {
+  const ms = new Date(2026, 10, 20).getTime();
+  const h1 = { strNumber: 'S1', site: 'J1', kodeVendor: 'V1', planReceiveMs: ms };
+  const h2 = { strNumber: 'S2', site: 'J2', kodeVendor: 'V2', planReceiveMs: ms };
+  const i1 = [{ seq: 1, article: 'A1', description: 'a, b', requestQty: 2, approvalQty: 2 },
+              { seq: 2, article: 'A2', description: 'c', requestQty: 1, approvalQty: 1 }];
+  const i2 = [{ seq: 1, article: 'B1', description: 'd', requestQty: 5, approvalQty: 5 }];
+  const r = FLOW.buildCsvMany([{ header: h1, items: i1, review: {} }, { header: h2, items: i2, review: {} }]);
+  const lines = r.csv.split('\r\n');
+  assert.strictEqual(lines[0], FLOW.CSV_COLS.join(','));
+  assert.strictEqual(lines.length, 4);
+  assert.strictEqual(r.rowCount, 3);
+  assert.deepStrictEqual(r.skipped, []);
+  const one = FLOW.buildCsv(h1, i1, {}).split('\r\n').slice(1).concat(FLOW.buildCsv(h2, i2, {}).split('\r\n').slice(1));
+  assert.deepStrictEqual(lines.slice(1), one);
+});
+
+test('buildCsvMany: entri tanpa baris masuk skipped; pgrMap dipakai lintas entri; kosong = judul saja', () => {
+  const h1 = { strNumber: 'S1', site: 'J1', kodeVendor: 'V1', planReceiveMs: 0 };
+  const h2 = { strNumber: 'S2', site: 'J2', kodeVendor: 'V2', planReceiveMs: 0 };
+  const h3 = { strNumber: 'S3', site: 'J3', kodeVendor: 'V3', planReceiveMs: 0 };
+  const mk = (a, q) => [{ seq: 1, article: a, description: 'd', requestQty: q, approvalQty: q }];
+  const r = FLOW.buildCsvMany([
+    { header: h1, items: mk('X1', 1), review: {} },
+    { header: h2, items: mk('X2', 0), review: {} },
+    { header: h3, items: mk('X3', 4), review: { 1: { d: 'ok' } } }
+  ], { x1: 'J15', x3: 'J33' });
+  const lines = r.csv.split('\r\n');
+  assert.strictEqual(r.rowCount, 2);
+  assert.deepStrictEqual(r.skipped, ['S2']);
+  assert.strictEqual(lines[1].split(',')[9], 'J15');
+  assert.strictEqual(lines[2].split(',')[9], 'J33');
+  const empty = FLOW.buildCsvMany([]);
+  assert.strictEqual(empty.csv, FLOW.CSV_COLS.join(','));
+  assert.strictEqual(empty.rowCount, 0);
+  assert.deepStrictEqual(empty.skipped, []);
+});
+
+test('csvFileName: PR-IP-YYYYMMDD-HHMM-<n>STR.csv dari bagian tanggal lokal', () => {
+  assert.strictEqual(FLOW.csvFileName(new Date(2026, 0, 5, 9, 7), 3), 'PR-IP-20260105-0907-3STR.csv');
+  assert.strictEqual(FLOW.csvFileName(new Date(2026, 10, 13, 23, 59), 12), 'PR-IP-20261113-2359-12STR.csv');
+});

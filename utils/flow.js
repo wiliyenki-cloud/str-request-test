@@ -117,7 +117,7 @@ var FLOW = (function () {
     return (pgrMap && pgrMap[String(it.article).trim().toLowerCase()]) || '';
   }
 
-  function buildCsv(header, items, review, pgrMap) {
+  function csvRows(header, items, review, pgrMap) {
     var rows = [];
     items.forEach(function (it) {
       var qty = finalQty(it, review);
@@ -127,7 +127,28 @@ var FLOW = (function () {
         header.site, '1000', pgrOf(it, pgrMap), 'RJ20', '', header.kodeVendor, 'Y1', header.strNumber
       ].map(csvCell).join(','));
     });
-    return [CSV_COLS.join(',')].concat(rows).join('\r\n');
+    return rows;
+  }
+
+  function buildCsv(header, items, review, pgrMap) {
+    return [CSV_COLS.join(',')].concat(csvRows(header, items, review, pgrMap)).join('\r\n');
+  }
+
+  // Satu CSV untuk banyak STR: entries = [{header, items, review}]. skipped = nomor STR tanpa baris (semua qty final 0).
+  function buildCsvMany(entries, pgrMap) {
+    var rows = [], skipped = [];
+    entries.forEach(function (e) {
+      var r = csvRows(e.header, e.items, e.review, pgrMap);
+      if (r.length === 0) skipped.push(e.header.strNumber);
+      rows = rows.concat(r);
+    });
+    return { csv: [CSV_COLS.join(',')].concat(rows).join('\r\n'), rowCount: rows.length, skipped: skipped };
+  }
+
+  // Nama file CSV gabungan dari bagian tanggal lokal: PR-IP-YYYYMMDD-HHMM-<jumlah>STR.csv
+  function csvFileName(date, count) {
+    return 'PR-IP-' + date.getFullYear() + pad2(date.getMonth() + 1) + pad2(date.getDate()) + '-' +
+      pad2(date.getHours()) + pad2(date.getMinutes()) + '-' + count + 'STR.csv';
   }
 
   // Kode artikel (qty final > 0) yang tidak punya PGR di pgrMap.
@@ -345,7 +366,7 @@ var FLOW = (function () {
     S: S, CSV_COLS: CSV_COLS,
     parseMdReview: parseMdReview, serializeMdReview: serializeMdReview,
     finalQty: finalQty, koliCheck: koliCheck, validateApprovalQtys: validateApprovalQtys, validateMdDecisions: validateMdDecisions, statusAfterMd: statusAfterMd,
-    buildCsv: buildCsv, csvMissingPgr: csvMissingPgr, dummyRpa: dummyRpa, parseRpaData: parseRpaData, rpaDcStock: rpaDcStock, rpaSummary: rpaSummary, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited, filterItems: filterItems, siteOptions: siteOptions,
+    buildCsv: buildCsv, buildCsvMany: buildCsvMany, csvFileName: csvFileName, csvMissingPgr: csvMissingPgr, dummyRpa: dummyRpa, parseRpaData: parseRpaData, rpaDcStock: rpaDcStock, rpaSummary: rpaSummary, mdDepartmentsFor: mdDepartmentsFor, runLimited: runLimited, filterItems: filterItems, siteOptions: siteOptions,
     scopeSites: scopeSites, scopedFilter: scopedFilter, monthMarkers: monthMarkers, detailFilters: detailFilters, clampRangeStart: clampRangeStart,
     roleOverride: roleOverride
   };
