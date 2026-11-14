@@ -131,8 +131,8 @@ function renderItems(items) {
   var dcCodes = dcCodesOf(items);
   var sales = !!CONFIG.SALES_FIELDS;
   document.getElementById('sales-note').style.display = sales ? '' : 'none';
-  var colCount = 3 + 3 + dcCodes.length + 1 + (sales ? 1 : 0) + 3; // #/Article/Description + Toko/RDC/SPLT + DC + Jual 3 bln + [Deadstock] + Apv/Keputusan/Qty MD
-  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th>' + stockHeads(dcCodes) +
+  var colCount = 4 + 3 + dcCodes.length + 1 + (sales ? 1 : 0) + 3; // #/Article/Description/Alasan PS + Toko/RDC/SPLT + DC + Jual 3 bln + [Deadstock] + Apv/Keputusan/Qty MD
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>Alasan PS</th>' + stockHeads(dcCodes) +
     '<th class="num">Jual 3 bln</th>' + (sales ? '<th>Deadstock</th>' : '') + '<th class="num">Apv Qty</th><th>Keputusan</th><th>Qty MD</th></tr></thead>';
   var tbody = '<tbody>' + items.map(function(it) {
     var apv = it.approvalQty !== '' ? it.approvalQty : it.requestQty;
@@ -140,6 +140,7 @@ function renderItems(items) {
     var toggle = sum && sum.extras.length ? ' <button type="button" class="rpa-toggle" title="Detail RPA">&#9656;</button>' : '';
     return '<tr data-seq="' + escHtml(it.seq) + '">' +
       '<td>' + escHtml(it.seq) + toggle + '</td><td>' + escHtml(it.article) + '</td><td>' + escHtml(it.description) + koliTag(it.koli) + '</td>' +
+      '<td class="reason-cell">' + escHtml(it.reason) + '</td>' +
       stockCells(sum, dcCodes) + '<td class="num">' + rpaCell(sum && sum.avg3) + '</td>' +
       (sales ? deadCell(FLOW.salesDisplay(sum ? sum.avg3 : null, it.deadText)) : '') +
       '<td class="num">' + escHtml(String(apv)) + '</td>' +
@@ -163,7 +164,16 @@ function renderItems(items) {
       btn.innerHTML = open ? '&#9662;' : '&#9656;';
     });
   });
+  document.getElementById('expand-bar').style.display = document.querySelectorAll('#items-table button.rpa-toggle').length ? '' : 'none';
 }
+
+// Buka / tutup semua baris detail RPA sekaligus (tombol ▸ per baris tetap bekerja sendiri-sendiri).
+function setAllRpaRows(open) {
+  document.querySelectorAll('#items-table tr.rpa-extra').forEach(function(r) { r.style.display = open ? '' : 'none'; });
+  document.querySelectorAll('#items-table button.rpa-toggle').forEach(function(b) { b.innerHTML = open ? '&#9662;' : '&#9656;'; });
+}
+document.getElementById('btn-expand-all').addEventListener('click', function() { setAllRpaRows(true); });
+document.getElementById('btn-collapse-all').addEventListener('click', function() { setAllRpaRows(false); });
 
 // Aksi massal: samakan keputusan semua item. "Ubah semua" membuka kotak Qty MD di semua baris
 // (nilai awal = Apv Qty) supaya bisa diedit satu per satu. Event change dipicu agar kotak qty
@@ -223,6 +233,7 @@ function loadDetail() {
         description:  fieldText(r.fields['Description']),
         requestQty:   num(r.fields['Request Qty']),
         approvalQty:  num(r.fields['Approval Qty']),
+        reason:       fieldText(r.fields['Reason']),
         rpa:          FLOW.parseRpaData(fieldText(r.fields['RPA Data'])),
         deadText:     CONFIG.SALES_FIELDS ? fieldText(r.fields['Deadstock']) : '',
         koli:         num(r.fields['Koli']) > 1 ? Number(r.fields['Koli']) : 1

@@ -77,7 +77,7 @@ function renderItems(items) {
   var sales = !!CONFIG.SALES_FIELDS;
   var salesHead = sales ? '<th class="num">Jual 3 bln</th><th>Deadstock</th>' : '<th class="num">Sales</th>';
   document.getElementById('sales-note').style.display = sales ? '' : 'none';
-  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th class="num">Stock</th>' + salesHead + '<th class="num">Req Qty</th><th class="num">Apv Qty</th><th>Reason</th></tr></thead>';
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>Alasan PS</th><th class="num">Stock</th>' + salesHead + '<th class="num">Req Qty</th><th class="num">Apv Qty</th></tr></thead>';
   var tbody = '<tbody>' + items.map(function(it) {
     var sd = sales ? FLOW.salesDisplay(it.avgSales, it.deadText) : null;
     var salesCells = sales
@@ -87,11 +87,11 @@ function renderItems(items) {
       '<td>' + escHtml(it.seq) + '</td>' +
       '<td>' + escHtml(it.article) + '</td>' +
       '<td>' + escHtml(it.description) + koliTag(it.koli) + '</td>' +
+      '<td class="reason-cell">' + escHtml(it.reason) + '</td>' +
       '<td class="num">' + escHtml(it.stockQty) + '</td>' +
       salesCells +
       '<td class="num">' + escHtml(it.requestQty) + '</td>' +
-      '<td class="num"><input type="number" class="apv-qty-input" min="' + (it.koli > 1 ? it.koli : 0) + '"' + (it.koli > 1 ? ' step="' + it.koli + '"' : '') + ' value="' + escHtml(String(it.requestQty !== '' ? it.requestQty : 0)) + '"></td>' +
-      '<td>' + escHtml(it.reason) + '</td></tr>';
+      '<td class="num"><input type="number" class="apv-qty-input" min="' + (it.koli > 1 ? it.koli : 0) + '"' + (it.koli > 1 ? ' step="' + it.koli + '"' : '') + ' value="' + escHtml(String(it.requestQty !== '' ? it.requestQty : 0)) + '"></td></tr>';
   }).join('') + '</tbody>';
   document.getElementById('items-table').innerHTML = '<table>' + thead + tbody + '</table>';
 }

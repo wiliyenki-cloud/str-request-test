@@ -40,3 +40,4 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .koli-tag { display: inline-block; margin-top: 2px; padding: 0 6px; font-size: 10px; color: #8a5a00; background: #fff3d6; border-radius: 8px; }
 .note { font-size: 12px; color: #888; margin-top: 8px; }
 .pill-dead { display: inline-block; background: #ffebee; color: #c62828; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.reason-cell { min-width: 140px; max-width: 260px; white-space: normal; word-break: break-word; }

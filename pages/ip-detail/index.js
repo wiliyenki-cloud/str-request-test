@@ -1,6 +1,6 @@
 var HEADER_FIELDS = ['STR Number', 'Site', 'Site Name', 'Type STR', 'Supplying Site', 'Kode Vendor', 'Department',
                      'Plan Receive Date', 'Requested By', 'Submit Date', 'Status', 'MD Review'];
-var DETAIL_FIELDS = ['STR Number', 'Row Sequence', 'Article', 'Description', 'Request Qty', 'Approval Qty'];
+var DETAIL_FIELDS = ['STR Number', 'Row Sequence', 'Article', 'Description', 'Request Qty', 'Approval Qty', 'Reason'];
 // Field 'RPA Data' (hasil RPA STR) hanya ada di Base uji; di produksi tidak diminta.
 if (CONFIG.RPA_DATA_FIELD) DETAIL_FIELDS.push('RPA Data');
 // Field 'Deadstock' (dari DATA MASTER) hanya ada di Base uji; di produksi tidak diminta.
@@ -138,8 +138,8 @@ function renderItems() {
   var dcCodes = dcCodesOf(_items);
   var sales = !!CONFIG.SALES_FIELDS;
   document.getElementById('sales-note').style.display = sales ? '' : 'none';
-  var colCount = 3 + 3 + dcCodes.length + 1 + (sales ? 1 : 0) + 4; // #/Article/Description + Toko/RDC/SPLT + DC + Jual 3 bln + [Deadstock] + Req/Apv/MD/Final
-  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th>' + stockHeads(dcCodes) +
+  var colCount = 4 + 3 + dcCodes.length + 1 + (sales ? 1 : 0) + 4; // #/Article/Description/Alasan PS + Toko/RDC/SPLT + DC + Jual 3 bln + [Deadstock] + Req/Apv/MD/Final
+  var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>Alasan PS</th>' + stockHeads(dcCodes) +
     '<th class="num">Jual 3 bln</th>' + (sales ? '<th>Deadstock</th>' : '') + '<th class="num">Req</th><th class="num">Apv</th><th>MD</th><th class="num">Final</th></tr></thead>';
   var tbody = '<tbody>' + _items.map(function(it) {
     var fq = FLOW.finalQty(it, _review);
@@ -147,6 +147,7 @@ function renderItems() {
     var sum = FLOW.rpaSummary(it.rpa);
     var toggle = sum && sum.extras.length ? ' <button type="button" class="rpa-toggle" title="Detail RPA">&#9656;</button>' : '';
     return '<tr><td>' + escHtml(it.seq) + toggle + '</td><td>' + escHtml(it.article) + '</td><td>' + escHtml(it.description) + '</td>' +
+      '<td class="reason-cell">' + escHtml(it.reason) + '</td>' +
       stockCells(sum, dcCodes) + '<td class="num">' + rpaCell(sum && sum.avg3) + '</td>' +
       (sales ? deadCell(FLOW.salesDisplay(sum ? sum.avg3 : null, it.deadText)) : '') +
       '<td class="num">' + escHtml(String(it.requestQty)) + '</td><td class="num">' + escHtml(String(apv)) + '</td>' +
@@ -162,6 +163,7 @@ function renderItems() {
       btn.innerHTML = open ? '&#9662;' : '&#9656;';
     });
   });
+  document.getElementById('expand-bar').style.display = document.querySelectorAll('#items-table button.rpa-toggle').length ? '' : 'none';
 }
 
 function downloadCsv(pgrMap) {
@@ -250,6 +252,7 @@ function loadDetail() {
         description: fieldText(r.fields['Description']),
         requestQty:  r.fields['Request Qty']  != null ? r.fields['Request Qty']  : '',
         approvalQty: r.fields['Approval Qty'] != null ? r.fields['Approval Qty'] : '',
+        reason:      fieldText(r.fields['Reason']),
         rpa:         FLOW.parseRpaData(fieldText(r.fields['RPA Data'])),
         deadText:    CONFIG.SALES_FIELDS ? fieldText(r.fields['Deadstock']) : ''
       };
@@ -365,3 +368,11 @@ _strNumber = params.str || '';
 document.getElementById('btn-back').addEventListener('click', function() { window.history.back(); });
 if (!_strNumber) showFail('Parameter STR tidak ditemukan.');
 else loadDetail();
+
+// Buka / tutup semua baris detail RPA sekaligus (tombol ▸ per baris tetap bekerja sendiri-sendiri).
+function setAllRpaRows(open) {
+  document.querySelectorAll('#items-table tr.rpa-extra').forEach(function(r) { r.style.display = open ? '' : 'none'; });
+  document.querySelectorAll('#items-table button.rpa-toggle').forEach(function(b) { b.innerHTML = open ? '&#9662;' : '&#9656;'; });
+}
+document.getElementById('btn-expand-all').addEventListener('click', function() { setAllRpaRows(true); });
+document.getElementById('btn-collapse-all').addEventListener('click', function() { setAllRpaRows(false); });
