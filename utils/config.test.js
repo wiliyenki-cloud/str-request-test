@@ -106,3 +106,9 @@ test('MANAGER_SITE_OVERRIDE: kosong di produksi, akun developer jadi manager sit
   assert.deepStrictEqual(uji.MANAGER_SITE_OVERRIDE[dev], ['J999', 'J347', 'J752', 'J218', 'J383', 'J353', 'J399', 'J474', 'J341']);
   assert.strictEqual(Object.keys(uji.MANAGER_SITE_OVERRIDE).length, 1);
 });
+
+test('LIST_CACHE_TTL: detik cache daftar bersama, angka positif', () => {
+  const { CONFIG } = load('/pages/home/index.html', '');
+  assert.strictEqual(typeof CONFIG.LIST_CACHE_TTL, 'number');
+  assert.ok(CONFIG.LIST_CACHE_TTL > 0);
+});

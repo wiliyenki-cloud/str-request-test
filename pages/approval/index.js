@@ -50,7 +50,7 @@ function loadList() {
         larkSearch(
           CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
           FLOW.scopedFilter([{ field_name: 'Status', operator: 'is', value: [CONFIG.STATUS_WAITING_MGR] }], mySites),
-          { fieldNames: ['STR Number', 'Site', 'Site Name', 'Type STR', 'Department', 'Requested By', 'Submit Date', 'Status'] }
+          { fieldNames: ['STR Number', 'Site', 'Site Name', 'Type STR', 'Department', 'Requested By', 'Submit Date', 'Status'], cacheTtl: CONFIG.LIST_CACHE_TTL }
         ).then(function(strRecords) {
           var list = strRecords
             .filter(function(r) {

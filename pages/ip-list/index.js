@@ -225,7 +225,7 @@ function searchByStatus(status) {
   return larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, {
     conjunction: 'and',
     conditions: [{ field_name: 'Status', operator: 'is', value: [status] }]
-  }, { fieldNames: HEADER_FIELDS });
+  }, { fieldNames: HEADER_FIELDS, cacheTtl: CONFIG.LIST_CACHE_TTL });
 }
 
 // Status dipilih -> hanya satu pencarian ke server (bukan dua lalu disaring di layar).

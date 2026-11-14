@@ -259,7 +259,7 @@ function loadList() {
       var pSTR = (_scopeSites && _scopeSites.length === 0)
         ? Promise.resolve([])   // tidak punya akses: jangan menarik apa pun
         : larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
-            FLOW.scopedFilter(buildStrHeaderFilter().conditions, _scopeSites), { fieldNames: STR_LIST_FIELDS });
+            FLOW.scopedFilter(buildStrHeaderFilter().conditions, _scopeSites), { fieldNames: STR_LIST_FIELDS, cacheTtl: CONFIG.LIST_CACHE_TTL });
 
       return pSTR.then(function(strRecords) {
         if (typeof dbg === 'function') dbg('STR records: ' + strRecords.length + ', site records: ' + siteRecords.length + ', ico records: ' + icoRecords.length);

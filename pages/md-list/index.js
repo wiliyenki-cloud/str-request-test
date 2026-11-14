@@ -112,7 +112,7 @@ function fetchList() {
       var conditions = [{ field_name: 'Status', operator: 'is', value: [FLOW.S.WAITING_MD] }];
       if (d) conditions.push({ field_name: 'Department', operator: 'is', value: [d] });
       return larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID,
-        { conjunction: 'and', conditions: conditions }, { fieldNames: HEADER_FIELDS });
+        { conjunction: 'and', conditions: conditions }, { fieldNames: HEADER_FIELDS, cacheTtl: CONFIG.LIST_CACHE_TTL });
     };
   });
   return FLOW.runLimited(tasks, 2).then(function(results) {

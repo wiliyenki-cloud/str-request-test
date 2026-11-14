@@ -67,6 +67,12 @@ CONFIG.MASTER_ICO_OPTS = {
 // dengan ?env=prod (config.test.js menjaganya).
 // Aksi GAS larkBatchUpdate tersedia (nyalakan hanya setelah Code.gs baru ter-deploy).
 CONFIG.GAS_BATCH = false;
+// Detik cache bersama (di GAS) untuk query DAFTAR header (md-list, ip-list, approval, str-list).
+// Ratusan user yang membuka daftar yang sama cukup memicu satu panggilan ke Lark (batas Lark
+// ~20 req/detik per tabel). Setiap penulisan lewat GAS membatalkan cache tabelnya seketika,
+// jadi daftar yang dimuat ulang setelah sebuah aksi tetap segar; perubahan dari luar GAS
+// (mis. RPA/edit langsung di Lark) baru terlihat setelah TTL ini habis.
+CONFIG.LIST_CACHE_TTL = 20;
 CONFIG.FLOW_V2 = false;
 // Field 'Koli' di STR Detail hanya ada di Base uji; di produksi tidak boleh diminta.
 CONFIG.KOLI_FIELD = false;

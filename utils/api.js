@@ -66,7 +66,18 @@ function isAuthError(msg) {
   return /^AUTH:/.test(String(msg || ''));
 }
 
-function gasProxy(params) {
+// Lark membatasi baca per tabel (galat 1254290 TooManyRequest). GAS sudah mengulang beberapa
+// kali; kalau tetap kena, klien mengulang lagi dengan jeda acak sebelum menampilkan galat.
+var RATE_LIMIT_RETRIES = 2;
+function isRateLimitError(msg) {
+  return /1254290|TooManyRequest/i.test(String(msg || ''));
+}
+function rateLimitDelay(attempt) {
+  return 700 * (attempt + 1) + Math.floor(Math.random() * 700);
+}
+
+function gasProxy(params, attempt) {
+  attempt = attempt || 0;
   var p = withAuthToken(params);
   var qs = Object.keys(p).map(function(k) {
     return encodeURIComponent(k) + '=' + encodeURIComponent(p[k]);
@@ -79,6 +90,10 @@ function gasProxy(params) {
           // Sesi habis atau tidak sah: hapus cache pengguna supaya pembukaan berikutnya memulai ulang login Lark.
           if (typeof clearUserCache === 'function') clearUserCache();
           throw new Error('Sesi habis. Tutup lalu buka ulang aplikasi.');
+        }
+        if (isRateLimitError(msg) && attempt < RATE_LIMIT_RETRIES) {
+          return new Promise(function(resolve) { setTimeout(resolve, rateLimitDelay(attempt)); })
+            .then(function() { return gasProxy(params, attempt + 1); });
         }
         throw new Error(msg);
       }
