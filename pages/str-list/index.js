@@ -63,24 +63,32 @@ function dayEndMs(dateStr) {
   return new Date(+p[0], +p[1] - 1, +p[2], 23, 59, 59, 999).getTime();
 }
 
+// Tab status -> nilai Status. Tab "waiting" tidak memakai filter tanggal: semua yang masih menunggu
+// harus tampil berapa pun umurnya (diambil dari Lark berdasarkan Status, bukan rentang Submit Date).
+var WAITING_FILTERS = { 'waiting-mgr': 1, 'waiting-rpa': 1, 'waiting-md': 1, 'waiting-ip': 1, 'csv-ready': 1, 'waiting-ico': 1 };
+function isWaitingFilter(f) { return !!WAITING_FILTERS[f]; }
+function statusOfFilter(f) {
+  var map = {
+    'waiting-mgr': CONFIG.STATUS_WAITING_MGR,
+    'waiting-ico': CONFIG.STATUS_WAITING_ICO,
+    'done':        CONFIG.STATUS_DONE,
+    'reject':      CONFIG.STATUS_REJECT,
+    // Alur STR V2 (hanya ada di mode uji)
+    'waiting-rpa': FLOW.S.APPROVED_RPA,
+    'waiting-md':  FLOW.S.WAITING_MD,
+    'waiting-ip':  FLOW.S.WAITING_IP,
+    'csv-ready':   FLOW.S.CSV_READY
+  };
+  return map[f];
+}
+
 // ── Filter: status tab + text search + date range ────────────────────────────
 function filterRecords(records, filter) {
   var result = records;
 
   // Status tab
   if (filter !== 'all') {
-    var map = {
-      'waiting-mgr': CONFIG.STATUS_WAITING_MGR,
-      'waiting-ico': CONFIG.STATUS_WAITING_ICO,
-      'done':        CONFIG.STATUS_DONE,
-      'reject':      CONFIG.STATUS_REJECT,
-      // Alur STR V2 (hanya ada di mode uji)
-      'waiting-rpa': FLOW.S.APPROVED_RPA,
-      'waiting-md':  FLOW.S.WAITING_MD,
-      'waiting-ip':  FLOW.S.WAITING_IP,
-      'csv-ready':   FLOW.S.CSV_READY
-    };
-    var target = map[filter];
+    var target = statusOfFilter(filter);
     result = result.filter(function(r) { return r.status === target; });
   }
 
@@ -93,12 +101,12 @@ function filterRecords(records, filter) {
     });
   }
 
-  // Date range — by Submit Date
-  if (_dateFrom) {
+  // Date range — by Submit Date (tidak berlaku di tab waiting)
+  if (_dateFrom && !isWaitingFilter(filter)) {
     var from = dayStartMs(_dateFrom);
     result = result.filter(function(r) { return r.submitDateRaw >= from; });
   }
-  if (_dateTo) {
+  if (_dateTo && !isWaitingFilter(filter)) {
     var to = dayEndMs(_dateTo);
     result = result.filter(function(r) { return r.submitDateRaw <= to; });
   }
@@ -224,6 +232,9 @@ function effectiveDateFromMs() {
 // Filter STR Number by Submit Date range langsung di Lark (server-side) —
 // tabel STR_HEADER terus tumbuh, fetch tanpa filter timeout begitu datanya besar.
 function buildStrHeaderFilter() {
+  if (isWaitingFilter(_activeFilter)) {
+    return { conjunction: 'and', conditions: [{ field_name: 'Status', operator: 'is', value: [statusOfFilter(_activeFilter)] }] };
+  }
   var conditions = [
     { field_name: 'Submit Date', operator: 'isGreater', value: ['ExactDate', String(effectiveDateFromMs() - 1)] }
   ];
@@ -466,8 +477,13 @@ document.getElementById('filter-tabs').querySelectorAll('.filter-tab').forEach(f
   tab.addEventListener('click', function() {
     document.querySelectorAll('.filter-tab').forEach(function(t) { t.classList.remove('active'); });
     tab.classList.add('active');
+    var wasWaiting = isWaitingFilter(_activeFilter);
+    var prev = _activeFilter;
     _activeFilter = tab.dataset.filter;
     _currentPage  = 1;
+    syncDateRow();
+    // Tab waiting mengambil data per Status; pindah antar tab waiting atau dari/ke tab bertanggal = ambil ulang.
+    if (isWaitingFilter(_activeFilter) || wasWaiting) { if (prev !== _activeFilter) { loadList(); return; } }
     renderList(_allRecords);
   });
 });
@@ -505,6 +521,12 @@ document.getElementById('btn-clear-dates').addEventListener('click', function() 
   document.getElementById('date-to').value   = '';
   loadList();
 });
+
+// Baris filter tanggal disembunyikan di tab waiting
+function syncDateRow() {
+  var row = document.querySelector('.date-row');
+  if (row) row.style.display = isWaitingFilter(_activeFilter) ? 'none' : '';
+}
 
 // Set default date input values
 document.getElementById('date-from').value = _dateFrom;
