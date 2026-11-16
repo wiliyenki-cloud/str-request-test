@@ -122,7 +122,8 @@ var FLOW = (function () {
   // Kode vendor item: pilihan MD per item (review[seq].v) bila ada, selain itu vendor header.
   function vendorOf(it, header, review) {
     var r = review && review[String(it.seq)];
-    return (r && r.v) ? r.v : header.kodeVendor;
+    // Hanya kode vendor berpola aman yang dipakai dari data MD Review; selain itu jatuh ke vendor header.
+    return (r && r.v && /^[A-Za-z0-9_-]{1,20}$/.test(String(r.v))) ? String(r.v) : header.kodeVendor;
   }
 
   function csvRows(header, items, review, pgrMap) {

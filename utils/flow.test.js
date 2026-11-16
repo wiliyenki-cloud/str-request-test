@@ -575,3 +575,9 @@ test('MD Review membawa Supplying Site per item dan CSV memakai vendor per item'
   assert.ok(lines[1].includes(',HDR,'));
   assert.ok(lines[2].includes(',HDR,'));
 });
+
+test('vendor per item dari MD Review ditolak bila berpola tidak aman', () => {
+  const items = [{ seq: 1, article: 'A1', description: 'd', requestQty: 4, approvalQty: 4 }];
+  const csv = FLOW.buildCsv({ strNumber: 'S1', site: 'J1', kodeVendor: 'HDR', planReceiveMs: 0 }, items, { '1': { d: 'ok', v: '=HYPERLINK("x")' } }, {});
+  assert.ok(csv.split('\r\n')[1].includes(',HDR,'));
+});
