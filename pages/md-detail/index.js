@@ -13,6 +13,7 @@ var _strNumber = '';
 var _acting    = false;
 var _items     = [];
 var _supplyOriginal = '';   // Supplying Site saat dimuat
+var _planOriginal   = '';   // Plan Receive Date saat dimuat (teks tampilan)
 var _supplySites    = null; // daftar dari aksi supplyingSites; null = gagal/belum dimuat (teks biasa)
 
 function getParams() {
@@ -74,7 +75,7 @@ function renderHeader(h) {
     ['Type STR', h.typeStr, false],
     ['Supplying Site', h.supplyingSite, false, 'supply-val'],
     ['Department', h.department, false],
-    ['Plan Receive', h.planReceiveDate, false],
+    ['Plan Receive', h.planReceiveDate, false, 'plan-val'],
     ['Requested By', h.requestedBy, false],
     ['Submit Date', h.submitDate, false]
   ];
@@ -101,7 +102,22 @@ function renderSupplySelect(current, res) {
     return '<option value="' + escHtml(o.code) + '"' + sel + '>' + escHtml(o.label) + '</option>';
   }).join('') + '</select>' +
     (res.mapped === false ? '<div class="note">Site ini belum punya mapping DC, semua DC ditampilkan.</div>' : '');
-  document.getElementById('supply-select').disabled = _acting;
+  var sel = document.getElementById('supply-select');
+  sel.disabled = _acting;
+  sel.addEventListener('change', updatePlanPreview);
+}
+
+// Ganti Supplying Site -> Plan Receive Date otomatis mengikuti lead time DC itu (hari ini + SLA).
+function updatePlanPreview() {
+  var el = document.getElementById('plan-val'), ss = document.getElementById('supply-select');
+  if (!el || !ss) return;
+  var ch = FLOW.supplyChange(_supplyOriginal, ss.value, _supplySites);
+  if (ch && typeof ch.days === 'number') {
+    var p = FLOW.leadPlanDate(ch.days);
+    el.innerHTML = escHtml(p.display) + ' <span class="note">(otomatis, lead time ' + ch.days + ' hari; semula ' + escHtml(_planOriginal) + ')</span>';
+  } else {
+    el.textContent = _planOriginal;
+  }
 }
 
 function loadSupplySites(site, current) {
@@ -245,6 +261,7 @@ function loadDetail() {
     var details = results[1];
     details.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
     _supplyOriginal = fieldText(h.fields['Supplying Site']);
+    _planOriginal   = fmtDate(h.fields['Plan Receive Date']);
     renderHeader({
       strNumber:       fieldText(h.fields['STR Number']),
       site:            fieldText(h.fields['Site']),
@@ -299,6 +316,7 @@ document.getElementById('btn-send').addEventListener('click', function() {
     if (ch) {
       fields['Supplying Site'] = ch.supplyingSite;
       if (ch.kodeVendor) fields['Kode Vendor'] = ch.kodeVendor;
+      if (typeof ch.days === 'number') fields['Plan Receive Date'] = FLOW.leadPlanDate(ch.days).ms;
     }
     return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, _recordId, fields)
       .then(function() { return v.kept; });

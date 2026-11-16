@@ -387,11 +387,25 @@ var FLOW = (function () {
         vendor = String(s.vendorCode).trim();
       }
     });
-    return { supplyingSite: sel, kodeVendor: vendor };
+    var days;
+    (sites || []).forEach(function (s) {
+      if (s && String(s.code).toUpperCase() === sel.toUpperCase() && typeof s.days === 'number' && s.days >= 0) days = s.days;
+    });
+    return { supplyingSite: sel, kodeVendor: vendor, days: days };
+  }
+
+  // Plan Receive Date terdekat = hari ini + lead time (hari kalender, tanggal lokal). ms = tengah malam UTC
+  // tanggal itu (sama dengan yang ditulis GAS: new Date('YYYY-MM-DD').getTime()).
+  function leadPlanDate(days, now) {
+    var d = new Date((now || new Date()).getTime());
+    d.setHours(12, 0, 0, 0);
+    d.setDate(d.getDate() + (Number(days) || 0));
+    var iso = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+    return { iso: iso, ms: Date.parse(iso), display: ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear() };
   }
 
   return {
-    supplyChange: supplyChange,
+    supplyChange: supplyChange, leadPlanDate: leadPlanDate,
     salesDisplay: salesDisplay,
     S: S, CSV_COLS: CSV_COLS,
     parseMdReview: parseMdReview, serializeMdReview: serializeMdReview,

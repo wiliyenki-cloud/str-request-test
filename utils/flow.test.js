@@ -528,7 +528,7 @@ test('supplyChange: tidak berubah -> null', () => {
 
 test('supplyChange: berubah dengan vendor', () => {
   const sites = [{ code: 'H001', name: 'A', vendorCode: 'V1' }, { code: 'H064', name: 'C', vendorCode: 'V64' }];
-  assert.deepStrictEqual(FLOW.supplyChange('H001', 'H064', sites), { supplyingSite: 'H064', kodeVendor: 'V64' });
+  assert.deepStrictEqual(FLOW.supplyChange('H001', 'H064', sites), { supplyingSite: 'H064', kodeVendor: 'V64', days: undefined });
 });
 
 test('supplyChange: vendor kosong atau tidak dikenal -> kodeVendor undefined', () => {
@@ -539,4 +539,15 @@ test('supplyChange: vendor kosong atau tidak dikenal -> kodeVendor undefined', (
   const r2 = FLOW.supplyChange('H001', 'H099', sites);
   assert.strictEqual(r2.kodeVendor, undefined);
   assert.strictEqual(FLOW.supplyChange('', 'H014', null).supplyingSite, 'H014');
+});
+
+test('supplyChange membawa days; leadPlanDate = hari ini + lead time', () => {
+  const sites = [{ code: 'H014', vendorCode: '61', days: 5 }, { code: 'H001', vendorCode: '', days: 2 }];
+  assert.strictEqual(FLOW.supplyChange('H001', 'H014', sites).days, 5);
+  assert.strictEqual(FLOW.supplyChange('H014', 'H001', [{ code: 'H001' }]).days, undefined);
+  const p = FLOW.leadPlanDate(5, new Date(2026, 10, 16, 23, 30));
+  assert.strictEqual(p.iso, '2026-11-21');
+  assert.strictEqual(p.display, '21/11/2026');
+  assert.strictEqual(p.ms, Date.parse('2026-11-21'));
+  assert.strictEqual(FLOW.leadPlanDate(30, new Date(2026, 10, 16)).iso, '2026-12-16');
 });
