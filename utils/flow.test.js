@@ -581,3 +581,14 @@ test('vendor per item dari MD Review ditolak bila berpola tidak aman', () => {
   const csv = FLOW.buildCsv({ strNumber: 'S1', site: 'J1', kodeVendor: 'HDR', planReceiveMs: 0 }, items, { '1': { d: 'ok', v: '=HYPERLINK("x")' } }, {});
   assert.ok(csv.split('\r\n')[1].includes(',HDR,'));
 });
+
+test('Plan Receive per item: serialize p dan CSV memakai tanggal per item', () => {
+  const rv = FLOW.parseMdReview(FLOW.serializeMdReview([{ seq: 1, d: 'ok', p: '2026-11-25' }, { seq: 2, d: 'ok', p: 'bukan-tanggal' }]));
+  assert.strictEqual(rv['1'].p, '2026-11-25');
+  assert.strictEqual(rv['2'].p, undefined);
+  const items = [1, 2].map((n) => ({ seq: n, article: 'A' + n, description: 'd', requestQty: 4, approvalQty: 4 }));
+  const hdrMs = Date.parse('2026-11-20');
+  const lines = FLOW.buildCsv({ strNumber: 'S1', site: 'J1', kodeVendor: 'V', planReceiveMs: hdrMs }, items, rv, {}).split('\r\n').slice(1);
+  assert.ok(lines[0].includes(',25.11.2026,'));
+  assert.ok(lines[1].includes(',20.11.2026,'));
+});

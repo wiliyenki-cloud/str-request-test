@@ -32,6 +32,8 @@ var FLOW = (function () {
       else out[String(x.seq)] = { d: x.d };
       // Supplying Site per item (hanya bila MD mengubahnya): s = kode DC, v = kode vendor DC itu
       if (x.s) { out[String(x.seq)].s = String(x.s); if (x.v) out[String(x.seq)].v = String(x.v); }
+      // Plan Receive Date per item (YYYY-MM-DD), hanya bila MD mengubahnya
+      if (x.p && /^\d{4}-\d{2}-\d{2}$/.test(String(x.p))) out[String(x.seq)].p = String(x.p);
     });
     return JSON.stringify(out);
   }
@@ -131,8 +133,10 @@ var FLOW = (function () {
     items.forEach(function (it) {
       var qty = finalQty(it, review);
       if (qty <= 0) return;
+      var rv = review && review[String(it.seq)];
+      var planMs = (rv && rv.p && /^\d{4}-\d{2}-\d{2}$/.test(String(rv.p))) ? Date.parse(rv.p) : header.planReceiveMs;
       rows.push([
-        'ZNB1', '', '', it.article, it.description, qty, ddmmyyyy(header.planReceiveMs),
+        'ZNB1', '', '', it.article, it.description, qty, ddmmyyyy(planMs),
         header.site, '1000', pgrOf(it, pgrMap), 'RJ20', '', vendorOf(it, header, review), 'Y1', header.strNumber
       ].map(csvCell).join(','));
     });

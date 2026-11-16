@@ -13,6 +13,7 @@ var _strNumber = '';
 var _acting    = false;
 var _items     = [];
 var _supplyOriginal = '';   // Supplying Site saat dimuat
+var _planOrigIso    = '';   // Plan Receive Date header (YYYY-MM-DD) = nilai awal tiap item
 var _planOriginal   = '';   // Plan Receive Date saat dimuat (teks tampilan)
 var _supplyMapped   = true;
 var _supplySites    = null; // daftar dari aksi supplyingSites; null = gagal/belum dimuat (teks biasa)
@@ -55,7 +56,7 @@ function showToast(msg, color) {
 function setActing(val) {
   _acting = val;
   document.getElementById('btn-send').disabled = val;
-  Array.prototype.forEach.call(document.querySelectorAll('#items-table select.md-sup'), function(s) { s.disabled = val; });
+  Array.prototype.forEach.call(document.querySelectorAll('#items-table select.md-sup, #items-table input.md-plan'), function(s) { s.disabled = val; });
   document.getElementById('btn-start-reject').disabled = val;
   Array.prototype.forEach.call(document.querySelectorAll('#bulk-actions button'), function(b) { b.disabled = val; });
   document.getElementById('btn-send').textContent = val ? 'Menyimpan...' : 'Kirim ke IP';
@@ -114,23 +115,46 @@ function supplyRows() {
     var info = siteInfo(code);
     var changed = String(code).toUpperCase() !== String(_supplyOriginal).toUpperCase();
     var keep = tr.querySelector('.md-dec').value !== 'reject';
-    return { seq: Number(tr.dataset.seq), code: code, vendor: info ? info.vendorCode : '', days: info ? info.days : undefined, changed: changed, keep: keep };
+    var pl = tr.querySelector('.md-plan');
+    var plan = pl ? pl.value : _planOrigIso;
+    return { seq: Number(tr.dataset.seq), code: code, vendor: info ? info.vendorCode : '', days: info ? info.days : undefined, changed: changed, keep: keep,
+             plan: plan, planChanged: !!plan && plan !== _planOrigIso, minPlan: (info && typeof info.days === 'number') ? FLOW.leadPlanDate(info.days).iso : '' };
   });
 }
 
-// Plan Receive Date otomatis = hari ini + SLA TERJAUH di antara item yang dipertahankan (hanya bila ada item yang DC-nya diubah).
+// Header menampilkan Plan Receive terjauh di antara item yang dipertahankan bila ada item yang diubah (DC atau tanggal).
+function headerPlanIso(rows) {
+  var any = rows.some(function(r) { return r.changed || r.planChanged; });
+  if (!any) return '';
+  var best = '';
+  rows.forEach(function(r) { if (r.keep && r.plan && r.plan > best) best = r.plan; });
+  return best;
+}
+
 function updatePlanPreview() {
   var el = document.getElementById('plan-val');
   if (!el || !_supplySites) return;
-  var rows = supplyRows();
-  var anyChanged = rows.some(function(r) { return r.changed; });
-  var far = anyChanged ? FLOW.farthestLead(rows.filter(function(r) { return r.keep; })) : null;
-  if (far) {
-    var p = FLOW.leadPlanDate(far.days);
-    el.innerHTML = escHtml(p.display) + ' <span class="note">(otomatis: SLA terjauh ' + far.days + ' hari, ' + escHtml(far.code) + '; semula ' + escHtml(_planOriginal) + ')</span>';
+  var iso = headerPlanIso(supplyRows());
+  if (iso) {
+    var p = iso.split('-');
+    el.innerHTML = escHtml(p[2] + '/' + p[1] + '/' + p[0]) + ' <span class="note">(terjauh dari item; semula ' + escHtml(_planOriginal) + ')</span>';
   } else {
     el.textContent = _planOriginal;
   }
+}
+
+// DC item diganti -> Plan Receive item otomatis = hari ini + SLA DC itu (masih bisa dimajukan ke tanggal lebih jauh, tidak lebih awal dari SLA).
+function onSupplyChange(tr) {
+  var ss = tr.querySelector('.md-sup'), pl = tr.querySelector('.md-plan');
+  if (!ss || !pl) return;
+  var info = siteInfo(ss.value);
+  if (String(ss.value).toUpperCase() === String(_supplyOriginal).toUpperCase()) {
+    pl.value = _planOrigIso;
+  } else if (info && typeof info.days === 'number') {
+    pl.value = FLOW.leadPlanDate(info.days).iso;
+  }
+  pl.min = (info && typeof info.days === 'number') ? FLOW.leadPlanDate(info.days).iso : '';
+  updatePlanPreview();
 }
 
 function loadSupplySites(site) {
@@ -190,9 +214,9 @@ function renderItems(items) {
   var sales = !!CONFIG.SALES_FIELDS;
   document.getElementById('sales-note').style.display = sales ? '' : 'none';
   var supCol = !!_supplySites;
-  var colCount = 4 + 3 + dcCodes.length + 1 + (sales ? 1 : 0) + (supCol ? 1 : 0) + 3; // #/Article/Description/Alasan PS + Toko/RDC/SPLT + DC + Jual 3 bln + [Deadstock] + Apv/Keputusan/Qty MD
+  var colCount = 4 + 3 + dcCodes.length + 1 + (sales ? 1 : 0) + (supCol ? 2 : 0) + 3; // #/Article/Description/Alasan PS + Toko/RDC/SPLT + DC + Jual 3 bln + [Deadstock] + Apv/Keputusan/Qty MD
   var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>Alasan PS</th>' + stockHeads(dcCodes) +
-    '<th class="num">Jual 3 bln</th>' + (sales ? '<th>Deadstock</th>' : '') + '<th class="num">Apv Qty</th>' + (supCol ? '<th>Supplying Site</th>' : '') + '<th>Keputusan</th><th>Qty MD</th></tr></thead>';
+    '<th class="num">Jual 3 bln</th>' + (sales ? '<th>Deadstock</th>' : '') + '<th class="num">Apv Qty</th>' + (supCol ? '<th>Supplying Site</th><th>Plan Receive</th>' : '') + '<th>Keputusan</th><th>Qty MD</th></tr></thead>';
   var tbody = '<tbody>' + items.map(function(it) {
     var apv = it.approvalQty !== '' ? it.approvalQty : it.requestQty;
     var sum = FLOW.rpaSummary(it.rpa);
@@ -203,7 +227,8 @@ function renderItems(items) {
       stockCells(sum, dcCodes) + '<td class="num">' + rpaCell(sum && sum.avg3) + '</td>' +
       (sales ? deadCell(FLOW.salesDisplay(sum ? sum.avg3 : null, it.deadText)) : '') +
       '<td class="num">' + escHtml(String(apv)) + '</td>' +
-      (supCol ? '<td><select class="md-sup">' + supplyOptionsHtml(_supplyOriginal) + '</select></td>' : '') +
+      (supCol ? '<td><select class="md-sup">' + supplyOptionsHtml(_supplyOriginal) + '</select></td>' +
+        '<td><input type="date" class="md-plan" value="' + escHtml(_planOrigIso) + '"></td>' : '') +
       '<td><select class="md-dec"><option value="">Pilih</option><option value="ok">Setuju</option>' +
         '<option value="qty">Ubah qty</option><option value="reject">Tolak</option></select></td>' +
       '<td><input type="number" class="md-qty" min="' + (it.koli > 1 ? it.koli : 0) + '" max="999"' + (it.koli > 1 ? ' step="' + it.koli + '"' : '') + ' disabled value="' + escHtml(String(apv)) + '"></td>' +
@@ -217,7 +242,13 @@ function renderItems(items) {
       updatePlanPreview();
     });
   });
-  document.querySelectorAll('#items-table select.md-sup').forEach(function(sel) { sel.addEventListener('change', updatePlanPreview); });
+  document.querySelectorAll('#items-table select.md-sup').forEach(function(sel) { sel.addEventListener('change', function() { onSupplyChange(sel.closest('tr')); }); });
+  document.querySelectorAll('#items-table input.md-plan').forEach(function(inp) { inp.addEventListener('change', updatePlanPreview); });
+  // Batas awal tanggal per item mengikuti SLA DC saat ini
+  document.querySelectorAll('#items-table tbody tr[data-seq]').forEach(function(tr) {
+    var pl = tr.querySelector('.md-plan'), info = siteInfo(_supplyOriginal);
+    if (pl && info && typeof info.days === 'number') pl.min = FLOW.leadPlanDate(info.days).iso;
+  });
   document.querySelectorAll('#items-table button.rpa-toggle').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var extra = btn.closest('tr').nextElementSibling;
@@ -262,6 +293,8 @@ function collectDecisions() {
       out.s = ss.value;
       if (info && info.vendorCode) out.v = info.vendorCode;
     }
+    var pl = tr.querySelector('.md-plan');
+    if (pl && pl.value && pl.value !== _planOrigIso) out.p = pl.value;
     return out;
   });
 }
@@ -293,6 +326,7 @@ function loadDetail() {
     details.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
     _supplyOriginal = fieldText(h.fields['Supplying Site']);
     _planOriginal   = fmtDate(h.fields['Plan Receive Date']);
+    _planOrigIso    = h.fields['Plan Receive Date'] ? new Date(Number(h.fields['Plan Receive Date'])).toISOString().slice(0, 10) : '';
     renderHeader({
       strNumber:       fieldText(h.fields['STR Number']),
       site:            fieldText(h.fields['Site']),
@@ -331,6 +365,8 @@ document.getElementById('btn-send').addEventListener('click', function() {
   var decisions = collectDecisions();
   var v = FLOW.validateMdDecisions(_items, decisions);
   if (!v.ok) { showToast(v.error, '#c62828'); return; }
+  var bad = supplyRows().filter(function(r) { return r.keep && r.changed && r.minPlan && (!r.plan || r.plan < r.minPlan); })[0];
+  if (bad) { showToast('Item ' + bad.seq + ': Plan Receive minimal ' + bad.minPlan + ' (SLA ' + bad.code + ').', '#c62828'); return; }
   setActing(true);
   getUserInfo().then(function(user) {
     var fields = {
@@ -348,8 +384,9 @@ document.getElementById('btn-send').addEventListener('click', function() {
     if (far) {
       fields['Supplying Site'] = far.code;
       if (far.vendor) fields['Kode Vendor'] = far.vendor;
-      fields['Plan Receive Date'] = FLOW.leadPlanDate(far.days).ms;
     }
+    var hdrPlan = headerPlanIso(rows);
+    if (hdrPlan) fields['Plan Receive Date'] = Date.parse(hdrPlan);
     return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, _recordId, fields)
       .then(function() { return v.kept; });
   }).then(function(kept) {
