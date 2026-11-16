@@ -14,6 +14,7 @@ var _acting    = false;
 var _items     = [];
 var _supplyOriginal = '';   // Supplying Site saat dimuat
 var _planOriginal   = '';   // Plan Receive Date saat dimuat (teks tampilan)
+var _supplyMapped   = true;
 var _supplySites    = null; // daftar dari aksi supplyingSites; null = gagal/belum dimuat (teks biasa)
 
 function getParams() {
@@ -54,8 +55,7 @@ function showToast(msg, color) {
 function setActing(val) {
   _acting = val;
   document.getElementById('btn-send').disabled = val;
-  var ss = document.getElementById('supply-select');
-  if (ss) ss.disabled = val;
+  Array.prototype.forEach.call(document.querySelectorAll('#items-table select.md-sup'), function(s) { s.disabled = val; });
   document.getElementById('btn-start-reject').disabled = val;
   Array.prototype.forEach.call(document.querySelectorAll('#bulk-actions button'), function(b) { b.disabled = val; });
   document.getElementById('btn-send').textContent = val ? 'Menyimpan...' : 'Kirim ke IP';
@@ -86,44 +86,57 @@ function renderHeader(h) {
     }).join('');
 }
 
-// Ganti teks Supplying Site dengan dropdown sesuai mapping DC site STR. Gagal -> teks biasa tetap.
-function renderSupplySelect(current, res) {
-  var el = document.getElementById('supply-val');
-  if (!el || !res || !res.sites) return;
-  var cur = String(current || '').trim();
-  var opts = res.sites.map(function(s) {
-    return { code: s.code, label: s.code + (s.name ? ' — ' + s.name : '') };
-  });
-  var found = opts.some(function(o) { return String(o.code).toUpperCase() === cur.toUpperCase(); });
-  if (cur && !found) opts.unshift({ code: cur, label: cur + ' (saat ini, di luar mapping)' });
-  _supplySites = res.sites;
-  el.innerHTML = '<select id="supply-select" class="md-dec">' + opts.map(function(o) {
-    var sel = String(o.code).toUpperCase() === cur.toUpperCase() ? ' selected' : '';
-    return '<option value="' + escHtml(o.code) + '"' + sel + '>' + escHtml(o.label) + '</option>';
-  }).join('') + '</select>' +
-    (res.mapped === false ? '<div class="note">Site ini belum punya mapping DC, semua DC ditampilkan.</div>' : '');
-  var sel = document.getElementById('supply-select');
-  sel.disabled = _acting;
-  sel.addEventListener('change', updatePlanPreview);
+// Supplying Site per item (MD): opsi dari mapping DC site STR (aksi supplyingSites). Daftar gagal dimuat -> kolom tidak ada.
+function supplyOptionsHtml(selected) {
+  var cur = String(selected || '').trim().toUpperCase();
+  var found = false;
+  var html = _supplySites.map(function(s) {
+    var isSel = String(s.code).toUpperCase() === cur;
+    if (isSel) found = true;
+    return '<option value="' + escHtml(s.code) + '"' + (isSel ? ' selected' : '') + '>' + escHtml(s.code + (s.name ? ' — ' + s.name : '')) + '</option>';
+  }).join('');
+  if (cur && !found) html = '<option value="' + escHtml(_supplyOriginal) + '" selected>' + escHtml(_supplyOriginal) + ' (di luar mapping)</option>' + html;
+  return html;
 }
 
-// Ganti Supplying Site -> Plan Receive Date otomatis mengikuti lead time DC itu (hari ini + SLA).
+function siteInfo(code) {
+  var c = String(code || '').toUpperCase(), r = null;
+  (_supplySites || []).forEach(function(s) { if (String(s.code).toUpperCase() === c) r = s; });
+  return r;
+}
+
+// Keadaan per item: kode DC terpilih, apakah berubah dari header, lead time DC itu, dan apakah item masih dipertahankan.
+function supplyRows() {
+  if (!_supplySites) return [];
+  return Array.prototype.map.call(document.querySelectorAll('#items-table tbody tr[data-seq]'), function(tr) {
+    var ss = tr.querySelector('.md-sup');
+    var code = ss ? ss.value : _supplyOriginal;
+    var info = siteInfo(code);
+    var changed = String(code).toUpperCase() !== String(_supplyOriginal).toUpperCase();
+    var keep = tr.querySelector('.md-dec').value !== 'reject';
+    return { seq: Number(tr.dataset.seq), code: code, vendor: info ? info.vendorCode : '', days: info ? info.days : undefined, changed: changed, keep: keep };
+  });
+}
+
+// Plan Receive Date otomatis = hari ini + SLA TERJAUH di antara item yang dipertahankan (hanya bila ada item yang DC-nya diubah).
 function updatePlanPreview() {
-  var el = document.getElementById('plan-val'), ss = document.getElementById('supply-select');
-  if (!el || !ss) return;
-  var ch = FLOW.supplyChange(_supplyOriginal, ss.value, _supplySites);
-  if (ch && typeof ch.days === 'number') {
-    var p = FLOW.leadPlanDate(ch.days);
-    el.innerHTML = escHtml(p.display) + ' <span class="note">(otomatis, lead time ' + ch.days + ' hari; semula ' + escHtml(_planOriginal) + ')</span>';
+  var el = document.getElementById('plan-val');
+  if (!el || !_supplySites) return;
+  var rows = supplyRows();
+  var anyChanged = rows.some(function(r) { return r.changed; });
+  var far = anyChanged ? FLOW.farthestLead(rows.filter(function(r) { return r.keep; })) : null;
+  if (far) {
+    var p = FLOW.leadPlanDate(far.days);
+    el.innerHTML = escHtml(p.display) + ' <span class="note">(otomatis: SLA terjauh ' + far.days + ' hari, ' + escHtml(far.code) + '; semula ' + escHtml(_planOriginal) + ')</span>';
   } else {
     el.textContent = _planOriginal;
   }
 }
 
-function loadSupplySites(site, current) {
+function loadSupplySites(site) {
   return gasProxy({ action: 'supplyingSites', site: site })
-    .then(function(res) { renderSupplySelect(current, res); })
-    .catch(function() { /* graceful: teks biasa tetap tampil */ });
+    .then(function(res) { return (res && res.sites && res.sites.length) ? res : null; })
+    .catch(function() { return null; });
 }
 
 function rpaCell(v) { return (v == null || v === '') ? '-' : escHtml(String(v)); }
@@ -176,9 +189,10 @@ function renderItems(items) {
   var dcCodes = dcCodesOf(items);
   var sales = !!CONFIG.SALES_FIELDS;
   document.getElementById('sales-note').style.display = sales ? '' : 'none';
-  var colCount = 4 + 3 + dcCodes.length + 1 + (sales ? 1 : 0) + 3; // #/Article/Description/Alasan PS + Toko/RDC/SPLT + DC + Jual 3 bln + [Deadstock] + Apv/Keputusan/Qty MD
+  var supCol = !!_supplySites;
+  var colCount = 4 + 3 + dcCodes.length + 1 + (sales ? 1 : 0) + (supCol ? 1 : 0) + 3; // #/Article/Description/Alasan PS + Toko/RDC/SPLT + DC + Jual 3 bln + [Deadstock] + Apv/Keputusan/Qty MD
   var thead = '<thead><tr><th>#</th><th>Article</th><th>Description</th><th>Alasan PS</th>' + stockHeads(dcCodes) +
-    '<th class="num">Jual 3 bln</th>' + (sales ? '<th>Deadstock</th>' : '') + '<th class="num">Apv Qty</th><th>Keputusan</th><th>Qty MD</th></tr></thead>';
+    '<th class="num">Jual 3 bln</th>' + (sales ? '<th>Deadstock</th>' : '') + '<th class="num">Apv Qty</th>' + (supCol ? '<th>Supplying Site</th>' : '') + '<th>Keputusan</th><th>Qty MD</th></tr></thead>';
   var tbody = '<tbody>' + items.map(function(it) {
     var apv = it.approvalQty !== '' ? it.approvalQty : it.requestQty;
     var sum = FLOW.rpaSummary(it.rpa);
@@ -189,6 +203,7 @@ function renderItems(items) {
       stockCells(sum, dcCodes) + '<td class="num">' + rpaCell(sum && sum.avg3) + '</td>' +
       (sales ? deadCell(FLOW.salesDisplay(sum ? sum.avg3 : null, it.deadText)) : '') +
       '<td class="num">' + escHtml(String(apv)) + '</td>' +
+      (supCol ? '<td><select class="md-sup">' + supplyOptionsHtml(_supplyOriginal) + '</select></td>' : '') +
       '<td><select class="md-dec"><option value="">Pilih</option><option value="ok">Setuju</option>' +
         '<option value="qty">Ubah qty</option><option value="reject">Tolak</option></select></td>' +
       '<td><input type="number" class="md-qty" min="' + (it.koli > 1 ? it.koli : 0) + '" max="999"' + (it.koli > 1 ? ' step="' + it.koli + '"' : '') + ' disabled value="' + escHtml(String(apv)) + '"></td>' +
@@ -199,8 +214,10 @@ function renderItems(items) {
     sel.addEventListener('change', function() {
       var input = sel.closest('tr').querySelector('.md-qty');
       input.disabled = (sel.value !== 'qty');
+      updatePlanPreview();
     });
   });
+  document.querySelectorAll('#items-table select.md-sup').forEach(function(sel) { sel.addEventListener('change', updatePlanPreview); });
   document.querySelectorAll('#items-table button.rpa-toggle').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var extra = btn.closest('tr').nextElementSibling;
@@ -238,7 +255,14 @@ document.getElementById('bulk-actions').addEventListener('click', function(ev) {
 
 function collectDecisions() {
   return Array.prototype.map.call(document.querySelectorAll('#items-table tbody tr[data-seq]'), function(tr) {
-    return { seq: Number(tr.dataset.seq), d: tr.querySelector('.md-dec').value, q: tr.querySelector('.md-qty').value };
+    var out = { seq: Number(tr.dataset.seq), d: tr.querySelector('.md-dec').value, q: tr.querySelector('.md-qty').value };
+    var ss = tr.querySelector('.md-sup');
+    if (ss && String(ss.value).toUpperCase() !== String(_supplyOriginal).toUpperCase()) {
+      var info = siteInfo(ss.value);
+      out.s = ss.value;
+      if (info && info.vendorCode) out.v = info.vendorCode;
+    }
+    return out;
   });
 }
 
@@ -250,6 +274,13 @@ function loadDetail() {
     larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, filter, { fieldNames: HEADER_FIELDS }),
     larkSearch(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_DETAIL_TABLE_ID, filter, { fieldNames: DETAIL_FIELDS })
   ]).then(function(results) {
+    if (results[0].length === 0) return results;
+    return loadSupplySites(fieldText(results[0][0].fields['Site'])).then(function(res) {
+      _supplySites = res ? res.sites : null;
+      _supplyMapped = res ? res.mapped : true;
+      return results;
+    });
+  }).then(function(results) {
     if (results[0].length === 0) throw new Error('STR tidak ditemukan');
     var h = results[0][0];
     _recordId = h.record_id;
@@ -288,7 +319,7 @@ function loadDetail() {
     }));
     document.getElementById('footer-main').style.display = '';
     show('screen-content');
-    loadSupplySites(fieldText(h.fields['Site']), _supplyOriginal);
+    if (_supplySites && _supplyMapped === false) document.getElementById('sales-note').insertAdjacentHTML('afterend', '<div class="note">Site ini belum punya mapping DC, semua DC ditampilkan.</div>');
   }).catch(function(err) {
     showFail('Gagal memuat: ' + (err.message || String(err)));
   });
@@ -311,12 +342,13 @@ document.getElementById('btn-send').addEventListener('click', function() {
       fields['Reject Stage']  = 'MD';
       fields['Reject Reason'] = 'Semua item ditolak MD';
     }
-    var ss = document.getElementById('supply-select');
-    var ch = ss ? FLOW.supplyChange(_supplyOriginal, ss.value, _supplySites) : null;
-    if (ch) {
-      fields['Supplying Site'] = ch.supplyingSite;
-      if (ch.kodeVendor) fields['Kode Vendor'] = ch.kodeVendor;
-      if (typeof ch.days === 'number') fields['Plan Receive Date'] = FLOW.leadPlanDate(ch.days).ms;
+    // Ada item yang DC-nya diubah: header ikut DC dengan SLA terjauh (item yang dipertahankan) dan Plan Receive Date = hari ini + SLA itu.
+    var rows = supplyRows();
+    var far = rows.some(function(r) { return r.changed; }) ? FLOW.farthestLead(rows.filter(function(r) { return r.keep; })) : null;
+    if (far) {
+      fields['Supplying Site'] = far.code;
+      if (far.vendor) fields['Kode Vendor'] = far.vendor;
+      fields['Plan Receive Date'] = FLOW.leadPlanDate(far.days).ms;
     }
     return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, _recordId, fields)
       .then(function() { return v.kept; });

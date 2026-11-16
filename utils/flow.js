@@ -30,6 +30,8 @@ var FLOW = (function () {
     decisions.forEach(function (x) {
       if (x.d === 'qty') out[String(x.seq)] = { d: 'qty', q: Number(x.q) };
       else out[String(x.seq)] = { d: x.d };
+      // Supplying Site per item (hanya bila MD mengubahnya): s = kode DC, v = kode vendor DC itu
+      if (x.s) { out[String(x.seq)].s = String(x.s); if (x.v) out[String(x.seq)].v = String(x.v); }
     });
     return JSON.stringify(out);
   }
@@ -117,6 +119,12 @@ var FLOW = (function () {
     return (pgrMap && pgrMap[String(it.article).trim().toLowerCase()]) || '';
   }
 
+  // Kode vendor item: pilihan MD per item (review[seq].v) bila ada, selain itu vendor header.
+  function vendorOf(it, header, review) {
+    var r = review && review[String(it.seq)];
+    return (r && r.v) ? r.v : header.kodeVendor;
+  }
+
   function csvRows(header, items, review, pgrMap) {
     var rows = [];
     items.forEach(function (it) {
@@ -124,7 +132,7 @@ var FLOW = (function () {
       if (qty <= 0) return;
       rows.push([
         'ZNB1', '', '', it.article, it.description, qty, ddmmyyyy(header.planReceiveMs),
-        header.site, '1000', pgrOf(it, pgrMap), 'RJ20', '', header.kodeVendor, 'Y1', header.strNumber
+        header.site, '1000', pgrOf(it, pgrMap), 'RJ20', '', vendorOf(it, header, review), 'Y1', header.strNumber
       ].map(csvCell).join(','));
     });
     return rows;
@@ -394,6 +402,15 @@ var FLOW = (function () {
     return { supplyingSite: sel, kodeVendor: vendor, days: days };
   }
 
+  // SLA terjauh: dari rows [{days, ...}] pilih baris dengan days terbesar (pertama bila sama); days bukan angka diabaikan; tanpa baris valid -> null.
+  function farthestLead(rows) {
+    var best = null;
+    (rows || []).forEach(function (r) {
+      if (r && typeof r.days === 'number' && r.days >= 0 && (best === null || r.days > best.days)) best = r;
+    });
+    return best;
+  }
+
   // Plan Receive Date terdekat = hari ini + lead time (hari kalender, tanggal lokal). ms = tengah malam UTC
   // tanggal itu (sama dengan yang ditulis GAS: new Date('YYYY-MM-DD').getTime()).
   function leadPlanDate(days, now) {
@@ -405,7 +422,7 @@ var FLOW = (function () {
   }
 
   return {
-    supplyChange: supplyChange, leadPlanDate: leadPlanDate,
+    supplyChange: supplyChange, leadPlanDate: leadPlanDate, farthestLead: farthestLead,
     salesDisplay: salesDisplay,
     S: S, CSV_COLS: CSV_COLS,
     parseMdReview: parseMdReview, serializeMdReview: serializeMdReview,

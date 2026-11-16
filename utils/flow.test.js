@@ -551,3 +551,27 @@ test('supplyChange membawa days; leadPlanDate = hari ini + lead time', () => {
   assert.strictEqual(p.ms, Date.parse('2026-11-21'));
   assert.strictEqual(FLOW.leadPlanDate(30, new Date(2026, 10, 16)).iso, '2026-12-16');
 });
+
+test('farthestLead: SLA terjauh, abaikan days non-angka', () => {
+  assert.strictEqual(FLOW.farthestLead([{ code: 'A', days: 2 }, { code: 'B', days: 7 }, { code: 'C', days: 7 }, { code: 'D' }]).code, 'B');
+  assert.strictEqual(FLOW.farthestLead([{ code: 'A' }]), null);
+  assert.strictEqual(FLOW.farthestLead([]), null);
+});
+
+test('MD Review membawa Supplying Site per item dan CSV memakai vendor per item', () => {
+  const txt = FLOW.serializeMdReview([
+    { seq: 1, d: 'ok', s: 'H014', v: 'V14' },
+    { seq: 2, d: 'qty', q: 4, s: 'H064' },
+    { seq: 3, d: 'ok' }
+  ]);
+  const rv = FLOW.parseMdReview(txt);
+  assert.deepStrictEqual(rv['1'], { d: 'ok', s: 'H014', v: 'V14' });
+  assert.deepStrictEqual(rv['2'], { d: 'qty', q: 4, s: 'H064' });
+  assert.deepStrictEqual(rv['3'], { d: 'ok' });
+  const items = [1, 2, 3].map((n) => ({ seq: n, article: 'A' + n, description: 'd', requestQty: 4, approvalQty: 4 }));
+  const csv = FLOW.buildCsv({ strNumber: 'S1', site: 'J1', kodeVendor: 'HDR', planReceiveMs: 0 }, items, rv, {});
+  const lines = csv.split('\r\n').slice(1);
+  assert.ok(lines[0].includes(',V14,'));
+  assert.ok(lines[1].includes(',HDR,'));
+  assert.ok(lines[2].includes(',HDR,'));
+});
