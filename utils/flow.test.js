@@ -517,3 +517,26 @@ test('salesDisplay: dead dan deadLabel', () => {
   assert.deepStrictEqual(FLOW.salesDisplay(undefined, undefined), { avg: '-', dead: false, deadLabel: '-' });
   assert.strictEqual(FLOW.salesDisplay(2, 'lainnya').dead, false);
 });
+
+test('supplyChange: tidak berubah -> null', () => {
+  const sites = [{ code: 'H001', name: 'A', vendorCode: 'V1' }];
+  assert.strictEqual(FLOW.supplyChange('H001', 'H001', sites), null);
+  assert.strictEqual(FLOW.supplyChange('H001', 'h001 ', sites), null);
+  assert.strictEqual(FLOW.supplyChange('H001', '', sites), null);
+  assert.strictEqual(FLOW.supplyChange('H001', undefined, sites), null);
+});
+
+test('supplyChange: berubah dengan vendor', () => {
+  const sites = [{ code: 'H001', name: 'A', vendorCode: 'V1' }, { code: 'H064', name: 'C', vendorCode: 'V64' }];
+  assert.deepStrictEqual(FLOW.supplyChange('H001', 'H064', sites), { supplyingSite: 'H064', kodeVendor: 'V64' });
+});
+
+test('supplyChange: vendor kosong atau tidak dikenal -> kodeVendor undefined', () => {
+  const sites = [{ code: 'H014', name: 'B', vendorCode: '' }];
+  const r1 = FLOW.supplyChange('H001', 'H014', sites);
+  assert.strictEqual(r1.supplyingSite, 'H014');
+  assert.strictEqual(r1.kodeVendor, undefined);
+  const r2 = FLOW.supplyChange('H001', 'H099', sites);
+  assert.strictEqual(r2.kodeVendor, undefined);
+  assert.strictEqual(FLOW.supplyChange('', 'H014', null).supplyingSite, 'H014');
+});

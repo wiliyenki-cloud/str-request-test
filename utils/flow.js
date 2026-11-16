@@ -374,7 +374,24 @@ var FLOW = (function () {
     return { avg: shown, dead: dead, deadLabel: dead ? 'Deadstock' : (shown === '-' ? '-' : '') };
   }
 
+  // Perubahan Supplying Site oleh MD. null bila tidak berubah (kode sama tanpa peduli huruf besar/kecil,
+  // atau pilihan kosong); kodeVendor undefined bila vendorCode DC terpilih kosong/tidak dikenal.
+  function supplyChange(original, selectedCode, sites) {
+    var sel = String(selectedCode == null ? '' : selectedCode).trim();
+    if (!sel) return null;
+    var orig = String(original == null ? '' : original).trim();
+    if (sel.toUpperCase() === orig.toUpperCase()) return null;
+    var vendor;
+    (sites || []).forEach(function (s) {
+      if (s && String(s.code).toUpperCase() === sel.toUpperCase() && s.vendorCode && String(s.vendorCode).trim()) {
+        vendor = String(s.vendorCode).trim();
+      }
+    });
+    return { supplyingSite: sel, kodeVendor: vendor };
+  }
+
   return {
+    supplyChange: supplyChange,
     salesDisplay: salesDisplay,
     S: S, CSV_COLS: CSV_COLS,
     parseMdReview: parseMdReview, serializeMdReview: serializeMdReview,

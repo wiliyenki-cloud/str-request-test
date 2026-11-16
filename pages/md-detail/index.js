@@ -12,6 +12,8 @@ var _recordId  = '';
 var _strNumber = '';
 var _acting    = false;
 var _items     = [];
+var _supplyOriginal = '';   // Supplying Site saat dimuat
+var _supplySites    = null; // daftar dari aksi supplyingSites; null = gagal/belum dimuat (teks biasa)
 
 function getParams() {
   var qs = location.search.substring(1);
@@ -51,6 +53,8 @@ function showToast(msg, color) {
 function setActing(val) {
   _acting = val;
   document.getElementById('btn-send').disabled = val;
+  var ss = document.getElementById('supply-select');
+  if (ss) ss.disabled = val;
   document.getElementById('btn-start-reject').disabled = val;
   Array.prototype.forEach.call(document.querySelectorAll('#bulk-actions button'), function(b) { b.disabled = val; });
   document.getElementById('btn-send').textContent = val ? 'Menyimpan...' : 'Kirim ke IP';
@@ -68,7 +72,7 @@ function renderHeader(h) {
     ['STR Number', h.strNumber, true],
     ['Site', h.site + (h.siteName ? ' — ' + h.siteName : ''), false],
     ['Type STR', h.typeStr, false],
-    ['Supplying Site', h.supplyingSite, false],
+    ['Supplying Site', h.supplyingSite, false, 'supply-val'],
     ['Department', h.department, false],
     ['Plan Receive', h.planReceiveDate, false],
     ['Requested By', h.requestedBy, false],
@@ -77,8 +81,33 @@ function renderHeader(h) {
   document.getElementById('section-header').innerHTML =
     '<div class="section-title">Info STR</div>' +
     rows.map(function(r) {
-      return '<div class="info-row"><span class="info-lbl">' + r[0] + '</span><span class="info-val' + (r[2] ? ' bold' : '') + '">' + escHtml(r[1]) + '</span></div>';
+      return '<div class="info-row"><span class="info-lbl">' + r[0] + '</span><span class="info-val' + (r[2] ? ' bold' : '') + '"' + (r[3] ? ' id="' + r[3] + '"' : '') + '>' + escHtml(r[1]) + '</span></div>';
     }).join('');
+}
+
+// Ganti teks Supplying Site dengan dropdown sesuai mapping DC site STR. Gagal -> teks biasa tetap.
+function renderSupplySelect(current, res) {
+  var el = document.getElementById('supply-val');
+  if (!el || !res || !res.sites) return;
+  var cur = String(current || '').trim();
+  var opts = res.sites.map(function(s) {
+    return { code: s.code, label: s.code + (s.name ? ' — ' + s.name : '') };
+  });
+  var found = opts.some(function(o) { return String(o.code).toUpperCase() === cur.toUpperCase(); });
+  if (cur && !found) opts.unshift({ code: cur, label: cur + ' (saat ini, di luar mapping)' });
+  _supplySites = res.sites;
+  el.innerHTML = '<select id="supply-select" class="md-dec">' + opts.map(function(o) {
+    var sel = String(o.code).toUpperCase() === cur.toUpperCase() ? ' selected' : '';
+    return '<option value="' + escHtml(o.code) + '"' + sel + '>' + escHtml(o.label) + '</option>';
+  }).join('') + '</select>' +
+    (res.mapped === false ? '<div class="note">Site ini belum punya mapping DC, semua DC ditampilkan.</div>' : '');
+  document.getElementById('supply-select').disabled = _acting;
+}
+
+function loadSupplySites(site, current) {
+  return gasProxy({ action: 'supplyingSites', site: site })
+    .then(function(res) { renderSupplySelect(current, res); })
+    .catch(function() { /* graceful: teks biasa tetap tampil */ });
 }
 
 function rpaCell(v) { return (v == null || v === '') ? '-' : escHtml(String(v)); }
@@ -215,6 +244,7 @@ function loadDetail() {
     }
     var details = results[1];
     details.sort(function(a, b) { return (a.fields['Row Sequence'] || 0) - (b.fields['Row Sequence'] || 0); });
+    _supplyOriginal = fieldText(h.fields['Supplying Site']);
     renderHeader({
       strNumber:       fieldText(h.fields['STR Number']),
       site:            fieldText(h.fields['Site']),
@@ -241,6 +271,7 @@ function loadDetail() {
     }));
     document.getElementById('footer-main').style.display = '';
     show('screen-content');
+    loadSupplySites(fieldText(h.fields['Site']), _supplyOriginal);
   }).catch(function(err) {
     showFail('Gagal memuat: ' + (err.message || String(err)));
   });
@@ -262,6 +293,12 @@ document.getElementById('btn-send').addEventListener('click', function() {
     if (v.kept === 0) {
       fields['Reject Stage']  = 'MD';
       fields['Reject Reason'] = 'Semua item ditolak MD';
+    }
+    var ss = document.getElementById('supply-select');
+    var ch = ss ? FLOW.supplyChange(_supplyOriginal, ss.value, _supplySites) : null;
+    if (ch) {
+      fields['Supplying Site'] = ch.supplyingSite;
+      if (ch.kodeVendor) fields['Kode Vendor'] = ch.kodeVendor;
     }
     return larkUpdate(CONFIG.STR_BASE_APP_TOKEN, CONFIG.STR_HEADER_TABLE_ID, _recordId, fields)
       .then(function() { return v.kept; });
